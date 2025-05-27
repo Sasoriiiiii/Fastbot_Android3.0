@@ -501,6 +501,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
             document.getDocumentElement().normalize();
 
             disableBlockWidgets(document);
+            disableBlockTrees(document);
 
             hierarchy = getRootElement(document);
             TreeBuilder.filterTree(hierarchy);
@@ -523,17 +524,49 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
             NodeList nodes = (NodeList) xpath.evaluate(expr, document, XPathConstants.NODESET);
             for (int i = 0; i < nodes.getLength(); i++) {
                 Element e = (Element) nodes.item(i);
-                Logger.println("[MonkeySourceApeU2] Disable element: " + getElementAttributes(e));
-                e.setAttribute("clickable", "false");
-                e.setAttribute("long-clickable", "false");
-                e.setAttribute("scrollable", "false");
-                e.setAttribute("checkable", "false");
-                e.setAttribute("enabled", "false");
-                e.setAttribute("focusable", "false");
-
-                // Logger.println("[MonkeySourceApeU2] Disabled element: " + getElementAttributes(e));
+                setElementAttributes(e);
             }
         }
+    }
+
+    private void disableBlockTrees(Document document) throws XPathExpressionException {
+        XPath xpath = XPathFactory.newInstance().newXPath();
+        for (String expr : server.blockTrees) {
+            NodeList nodes = (NodeList) xpath.evaluate(expr, document, XPathConstants.NODESET);
+            for (int i = 0; i < nodes.getLength(); i++) {
+                Node node = nodes.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    disableElementAndDescendants((Element) node);
+                }
+            }
+        }
+    }
+
+    private void disableElementAndDescendants(Element element) {
+        setElementAttributes(element);
+        // Recursively disable all child elements
+        NodeList children = element.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                disableElementAndDescendants((Element) child);
+            }
+        }
+    }
+
+    public void setElementAttributes(Element element) {
+
+        Logger.println("[MonkeySourceApeU2] Disable element: " + getElementAttributes(element));
+        // Disable the current element
+        element.setAttribute("clickable", "false");
+        element.setAttribute("long-clickable", "false");
+        element.setAttribute("scrollable", "false");
+        element.setAttribute("checkable", "false");
+        element.setAttribute("enabled", "false");
+        element.setAttribute("focusable", "false");
+
+        // Log the disabled element
+        Logger.println("[MonkeySourceApeU2] Disabled element: " + getElementAttributes(element));
     }
 
     public Map<String, String> getElementAttributes(Element element) {

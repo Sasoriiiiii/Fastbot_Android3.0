@@ -36,6 +36,9 @@ public class ProxyServer extends NanoHTTPD {
 
     public boolean monkeyIsOver;
     public List<String> blockWidgets;
+
+    public List<String> blockTrees;
+
     private CoverageData mCoverageData;
 
     public boolean shouldUseCache() {
@@ -106,7 +109,7 @@ public class ProxyServer extends NanoHTTPD {
             StepMonkeyRequest req = new Gson().fromJson(requestBody, StepMonkeyRequest.class);
             stepsCount = req.getStepsCount();
             Logger.println("[ProxyServer] stepsCount: " + stepsCount);
-            return stepMonkey(req.getBlockWidgets());
+            return stepMonkey(req.getBlockWidgets(), req.getBlockTrees());
         }
 
         Logger.println("[Proxy Server] Forwarding");
@@ -135,11 +138,15 @@ public class ProxyServer extends NanoHTTPD {
         }
     }
 
-    private Response stepMonkey(List<String> blockWidgets){
+    private Response stepMonkey(List<String> blockWidgets, List<String> blockTrees){
         this.blockWidgets = blockWidgets;
+        this.blockTrees = blockTrees;
         Logger.println("[ProxyServer] receive request: stepMonkey");
         if (!blockWidgets.isEmpty()){
             Logger.println("              blockWidgets: " + blockWidgets);
+        }
+        if (!blockTrees.isEmpty()){
+            Logger.println("              blockTrees: " + blockWidgets);
         }
         MonkeySemaphore.stepMonkey.release();
         Logger.println("[ProxyServer] release semaphore: stepMonkey");
