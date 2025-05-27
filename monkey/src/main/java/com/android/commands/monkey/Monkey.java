@@ -378,6 +378,11 @@ public class Monkey {
     private long mRunningMillis = -1;
 
     /**
+     * Sampling period. profile the coverage every mProfilePeriod steps.
+     * */
+    private long mProfilePeriod = -1;
+
+    /**
      * Monkey test end time
      */
     private long mEndTime;
@@ -807,7 +812,7 @@ public class Monkey {
                 AiClient.loadResMapping(mMappingFilePath);
             }
 
-            mEventSource = new MonkeySourceApeU2(mRandom, mMainApps, mThrottle, mRandomizeThrottle, mPermissionTargetSystem, mOutputDirectory);
+            mEventSource = new MonkeySourceApeU2(mRandom, mMainApps, mThrottle, mRandomizeThrottle, mPermissionTargetSystem, mOutputDirectory, mProfilePeriod);
             mEventSource.setVerbose(mVerbose);
 
             // grant all permissions required, enabled by default
@@ -1039,6 +1044,9 @@ public class Monkey {
                         break;
                     case "--running-minutes":
                         mRunningMillis = nextOptionLong("Running Minutes") * ONE_MINUTE_IN_MILLISECOND;
+                        break;
+                    case "--profile-period":
+                        mProfilePeriod = nextOptionLong("Sampling period");
                         break;
                     case "--pct-touch": {
                         int i = MonkeySourceRandom.FACTOR_TOUCH;
@@ -1883,7 +1891,8 @@ public class Monkey {
                 "              [--ignore-crashes] [--ignore-timeouts]\n" +
                 "              [--ignore-security-exceptions]\n" +
                 "              [--agent [AGENT_TYPE(walk,stat)]]\n" +
-                "              [--running-minutes MINUTES\n" +
+                "              [--running-minutes MINUTES]\n" +
+                "              [--profile-period N-STEPS]\n" +
                 "              [--monitor-native-crashes] [--ignore-native-crashes]\n" +
                 "              [--kill-process-after-error] [--hprof]\n" +
                 "              [--pct-touch PERCENT] [--pct-motion PERCENT]\n" +

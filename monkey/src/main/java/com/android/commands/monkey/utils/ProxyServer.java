@@ -3,6 +3,7 @@ package com.android.commands.monkey.utils;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import com.android.commands.monkey.source.CoverageData;
 import com.google.gson.Gson;
 
 import java.io.File;
@@ -18,6 +19,8 @@ import fi.iki.elonen.NanoHTTPD;
 
 import static com.android.commands.monkey.utils.Config.takeScreenshotForEveryStep;
 
+import org.json.JSONObject;
+
 
 public class ProxyServer extends NanoHTTPD {
 
@@ -26,11 +29,14 @@ public class ProxyServer extends NanoHTTPD {
     private final static Gson gson = new Gson();
     private boolean useCache = false;
     private String hierarchyResponseCache;
+    public int stepsCount = 0;
 
     private ImageWriterQueue mImageWriter;
 
+
     public boolean monkeyIsOver;
     public List<String> blockWidgets;
+    private CoverageData mCoverageData;
 
     public boolean shouldUseCache() {
         return this.useCache;
@@ -55,6 +61,10 @@ public class ProxyServer extends NanoHTTPD {
     public Response serve(IHTTPSession session) {
         String method = session.getMethod().name();
         String uri = session.getUri();
+
+        if (session.getMethod() == Method.GET && uri.equals("/getStat")) {
+            return getCoverageStatistics();
+        }
 
         if (session.getMethod() == Method.GET && uri.equals("/stopMonkey"))
         {
@@ -94,11 +104,35 @@ public class ProxyServer extends NanoHTTPD {
         if (uri.equals("/stepMonkey") && session.getMethod() == Method.POST)
         {
             StepMonkeyRequest req = new Gson().fromJson(requestBody, StepMonkeyRequest.class);
+            stepsCount = req.getStepsCount();
+            Logger.println("[ProxyServer] stepsCount: " + stepsCount);
             return stepMonkey(req.getBlockWidgets());
         }
 
         Logger.println("[Proxy Server] Forwarding");
         return forward(uri, method, requestBody);
+    }
+
+    public void setCoverageStatistics(CoverageData coverageData){
+        mCoverageData = coverageData;
+    }
+
+    private Response getCoverageStatistics() {
+        try {
+            String data = gson.toJson(mCoverageData);
+            return newFixedLengthResponse(
+                    Response.Status.OK,
+                    "application/json",
+                    data
+            );
+        } catch (Exception e) {
+            Logger.println("Error generating coverage statistics: " + e.getMessage());
+            return newFixedLengthResponse(
+                    Response.Status.INTERNAL_ERROR,
+                    "application/json",
+                    "{\"error\": \"Failed to get coverage statistics\"}"
+            );
+        }
     }
 
     private Response stepMonkey(List<String> blockWidgets){

@@ -148,7 +148,11 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
     /**
      * total number of events generated so far
      */
-    private int mEventCount = 0;
+    private long mEventCount = 0;
+    /**
+     * The period of profiling coverage and other statistics.
+     *  */
+    private long mProfilePeriod;
     /**
      * monkey event queue
      */
@@ -249,7 +253,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
 
     public MonkeySourceApeU2(Random random, List<ComponentName> MainApps,
                                  long throttle, boolean randomizeThrottle, boolean permissionTargetSystem,
-                                 File outputDirectory){
+                                 File outputDirectory, long profilePeriod){
 
         mRandom = random;
         mMainApps = MainApps;
@@ -257,6 +261,8 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         mRandomizeThrottle = randomizeThrottle;
         mQ = new MonkeyEventQueue(random, 0, false); // we manage throttle
         mOutputDirectory = outputDirectory;
+        mProfilePeriod = profilePeriod;
+        Logger.println("[MonkeySourceApeU2] ProfilePeriod: " + mProfilePeriod);
 
         packagePermissions = new HashMap<>();
         for (ComponentName app : MainApps) {
@@ -360,6 +366,10 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
     public MonkeyEvent getNextEvent() {
         checkAppActivity();
         if (checkMonkeyStepDone()){
+            if (shouldProfile()){
+                Logger.println("[MonkeySourceApeU2] Profiling coverage...");
+                u2GetCoverage();
+            }
             MonkeySemaphore.doneMonkey.release();
             Logger.println("[MonkeySourceApeU2] release semaphore： doneMonkey");
         }
@@ -367,7 +377,8 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
             try {
                 Logger.println("[MonkeySourceApeU2] wait semaphore: stepMonkey");
                 MonkeySemaphore.stepMonkey.acquire();
-                Logger.println("[MonkeySourceApeU2] release semaphore: stepMonkey");
+                Logger.println("[MonkeySourceApeU2] acquired semaphore: stepMonkey");
+                Logger.println("[MonkeySourceApeU2] stepsCount: " + server.stepsCount);
                 if (server.monkeyIsOver) {
                     Logger.println("[MonkeySourceApeU2] received signal: MonkeyIsOver");
                     return null;
@@ -386,6 +397,10 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         lastMQEvents = mQ.size();
         //  Logger.println("MQ Events Size is " + lastMQEvents);
         return popEvent();
+    }
+
+    private boolean shouldProfile(){
+        return mProfilePeriod > 0 && server.stepsCount != 0 && server.stepsCount % mProfilePeriod == 0;
     }
 
     /**
@@ -1464,6 +1479,31 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         String[] totalActivities = set.toArray(new String[0]);
         Arrays.sort(totalActivities);
         Utils.activityStatistics(mOutputDirectory, testedActivities, totalActivities, new ArrayList<Map<String, String>>(), f, new HashMap<String, Integer>());
+    }
+
+    private void u2GetCoverage() {
+        HashSet<String> set = mTotalActivities;
+
+        String[] testedActivities = this.activityHistory.toArray(new String[0]);
+        int j = 0;
+        String activity = "";
+        for (String testedActivity : testedActivities) {
+            activity = testedActivity;
+            if (set.contains(activity)) {
+                j++;
+            }
+        }
+
+        float f = 0;
+        int s = set.size();
+        if (s > 0) {
+            f = 1.0f * j / s * 100;
+        }
+
+        String[] totalActivities = set.toArray(new String[0]);
+        server.setCoverageStatistics(
+                new CoverageData(f, totalActivities, testedActivities)
+        );
     }
 
     public void tearDown() {
