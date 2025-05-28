@@ -555,8 +555,9 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
     }
 
     public void setElementAttributes(Element element) {
-
-        Logger.println("[MonkeySourceApeU2] Disable element: " + getElementAttributes(element));
+        if (mVerbose > 3) {
+            Logger.println("[MonkeySourceApeU2] Disable element: " + getElementAttributes(element));
+        }
         // Disable the current element
         element.setAttribute("clickable", "false");
         element.setAttribute("long-clickable", "false");
@@ -566,7 +567,9 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         element.setAttribute("focusable", "false");
 
         // Log the disabled element
-        Logger.println("[MonkeySourceApeU2] Disabled element: " + getElementAttributes(element));
+        if (mVerbose > 3) {
+            Logger.println("[MonkeySourceApeU2] Disabled element: " + getElementAttributes(element));
+        }
     }
 
     public Map<String, String> getElementAttributes(Element element) {
