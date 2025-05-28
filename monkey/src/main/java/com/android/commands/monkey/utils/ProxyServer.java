@@ -146,7 +146,7 @@ public class ProxyServer extends NanoHTTPD {
             Logger.println("              blockWidgets: " + blockWidgets);
         }
         if (!blockTrees.isEmpty()){
-            Logger.println("              blockTrees: " + blockWidgets);
+            Logger.println("              blockTrees: " + blockTrees);
         }
         MonkeySemaphore.stepMonkey.release();
         Logger.println("[ProxyServer] release semaphore: stepMonkey");
