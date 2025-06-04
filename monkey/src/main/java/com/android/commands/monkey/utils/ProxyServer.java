@@ -2,15 +2,19 @@ package com.android.commands.monkey.utils;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Environment;
 
+import com.android.commands.monkey.fastbot.client.Operate;
 import com.android.commands.monkey.source.CoverageData;
 import com.google.gson.Gson;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -19,6 +23,7 @@ import fi.iki.elonen.NanoHTTPD;
 
 import static com.android.commands.monkey.utils.Config.takeScreenshotForEveryStep;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 
@@ -29,8 +34,11 @@ public class ProxyServer extends NanoHTTPD {
     private final static Gson gson = new Gson();
     private boolean useCache = false;
     private String hierarchyResponseCache;
+    public boolean takeScreenshots = false;
+    public String logStamp;
     public int stepsCount = 0;
 
+    private File outputDir;
     private ImageWriterQueue mImageWriter;
 
 
@@ -40,6 +48,12 @@ public class ProxyServer extends NanoHTTPD {
     public List<String> blockTrees;
 
     private CoverageData mCoverageData;
+    private int mVerbose = 1;
+
+    private HashSet<String> u2ExtMethods = new HashSet<>(
+            Arrays.asList("click", "setText", "swipe", "drag", "setOrientation", "pressKey")
+    );
+
 
     public boolean shouldUseCache() {
         return this.useCache;
@@ -104,6 +118,24 @@ public class ProxyServer extends NanoHTTPD {
             }
         }
 
+        if (uri.equals("/init") && session.getMethod() == Method.POST){
+            InitRequest req = new Gson().fromJson(requestBody, InitRequest.class);
+            takeScreenshots = req.isTakeScreenshots();
+            logStamp = req.getLogStamp();
+            outputDir = new File(
+                    Environment.getExternalStorageDirectory(), "output_" + logStamp
+            );
+            Logger.println("Init: ");
+            Logger.println("    takeScreenshots: " + takeScreenshots);
+            Logger.println("    logStamp: " + logStamp);
+            Logger.println("    outputDir: " + outputDir);
+            return newFixedLengthResponse(
+                    Response.Status.OK,
+                    "text/plain",
+                    "outputDir:" + outputDir
+            );
+        }
+
         if (uri.equals("/stepMonkey") && session.getMethod() == Method.POST)
         {
             StepMonkeyRequest req = new Gson().fromJson(requestBody, StepMonkeyRequest.class);
@@ -113,7 +145,17 @@ public class ProxyServer extends NanoHTTPD {
         }
 
         Logger.println("[Proxy Server] Forwarding");
-        return forward(uri, method, requestBody);
+        Response res = forward(uri, method, requestBody);
+        if (!uri.equals("/ping"))
+        {
+            if (takeScreenshotForEveryStep && u2ExtMethods.contains(method)) {
+                // save Screenshot while forwarding the request
+                Logger.println("[Proxy Server] Detected script method: " + method +  ", saving screenshot.");
+                okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
+                saveScreenshot(screenshotResponse);
+            }
+        }
+        return res;
     }
 
     public void setCoverageStatistics(CoverageData coverageData){
@@ -149,10 +191,14 @@ public class ProxyServer extends NanoHTTPD {
             Logger.println("              blockTrees: " + blockTrees);
         }
         MonkeySemaphore.stepMonkey.release();
-        Logger.println("[ProxyServer] release semaphore: stepMonkey");
+        if (mVerbose > 3) {
+            Logger.println("[ProxyServer] release semaphore: stepMonkey");
+        }
         try {
             MonkeySemaphore.doneMonkey.acquire();
-            Logger.println("[ProxyServer] release semaphore: doneMonkey");
+            if (mVerbose > 3){
+                Logger.println("[ProxyServer] release semaphore: doneMonkey");
+            }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -174,6 +220,33 @@ public class ProxyServer extends NanoHTTPD {
         }
     }
 
+    private boolean recordLog(Operate op, String screenshot_file){
+        JSONObject obj = new JSONObject();
+        try {
+            obj.put("Type", "Monkey");
+            obj.put("Info", op.toJson());
+            obj.put("Screenshot", screenshot_file);
+            saveLog(obj);
+        } catch (JSONException e){
+            Logger.errorPrintln("Error when recording log.");
+            return false;
+        }
+        return true;
+    }
+
+    private void recordLog(String screenshot){
+
+    }
+
+    private void saveLog(JSONObject obj){
+        String logFile = String.valueOf(new File(outputDir, "steps.log"));
+        try {
+            StoneUtils.writeStringToFile(logFile, obj.toString(), true);
+        } catch (IOException e){
+            Logger.errorPrintln("Error when saving log: " + logFile);
+        }
+    }
+
     /**
      * Generate proxy response from the ui automation server, which finally respond to PC
      * @param okhttpResponse the okhttp3.response from ui automation server
@@ -181,15 +254,14 @@ public class ProxyServer extends NanoHTTPD {
      * @throws IOException .
      */
     private Response generateServerResponse(okhttp3.Response okhttpResponse) throws IOException{
-        // 读取转发请求返回的响应数据
         if (okhttpResponse != null && okhttpResponse.body() != null) {
             String body = okhttpResponse.body().string();
-            // 查找对应的状态码，不存在时默认为 OK
+
             Response.Status status = Response.Status.lookup(okhttpResponse.code());
             if (status == null) {
                 status = Response.Status.OK;
             }
-            // 尝试从响应中获取 Content-Type，如果为空则默认 "application/json"
+
             String contentType = okhttpResponse.header("Content-Type", "application/json");
             return newFixedLengthResponse(status, contentType, body);
         } else {
@@ -207,14 +279,15 @@ public class ProxyServer extends NanoHTTPD {
      * @return the screenshot is taken successfully
      */
     private boolean saveScreenshot(okhttp3.Response screenshotResponse) {
-        Logger.println("[ProxyServer] Parsing bitmap with base64.");
-        // 获取 Base64 编码的字符串
+        if (mVerbose > 3){
+            Logger.println("[ProxyServer] Parsing bitmap with base64.");
+        }
         String res;
         try {
             res = screenshotResponse.body().string();
         }
         catch (IOException e) {
-            Logger.errorPrintln("[ProxyServer] [Error] ");
+            Logger.errorPrintln("[ProxyServer] [Error]");
             return false;
         }
 
@@ -233,18 +306,32 @@ public class ProxyServer extends NanoHTTPD {
             Logger.println("[ProxyServer][Error] Failed to parse screenshot response to bitmap");
             return false;
         } else {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ENGLISH);
-            String currentDateTime = sdf.format(new Date());
+            // Ensure screenshots dir
+            File screenshotDir = new File(outputDir, "screenshots");
+            Logger.println("Screenshots will be saved to: " + screenshotDir);
+            if (!screenshotDir.exists()) {
+                boolean created = screenshotDir.mkdirs();
+                if (!created) {
+                    Logger.println("[ProxyServer][Error] Failed to create screenshots directory");
+                    return false;
+                }
+            }
 
             // create the screenshot file
             File screenshotFile = new File(
-                "/sdcard/screenshots",
-                String.format(Locale.ENGLISH, "screenshot-%s.png", currentDateTime)
+                screenshotDir,
+                getScreenshotName()
             );
             Logger.println("[ProxyServer] Adding the screenshot to ImageWriter");
             mImageWriter.add(bitmap, screenshotFile);
             return true;
         }
+    }
+
+    private String getScreenshotName(){
+        SimpleDateFormat sdf = new SimpleDateFormat("HHmmssSSS", Locale.ENGLISH);
+        String currentDateTime = sdf.format(new Date());
+        return String.format(Locale.ENGLISH, "screenshot-%d-%s.png", stepsCount, currentDateTime);
     }
 
     /**
@@ -277,9 +364,6 @@ public class ProxyServer extends NanoHTTPD {
     }
 
     private Response forward(String uri, String method, String requestBody){
-        // 构造转发URL，这里假设使用 OkHttpClient 的 get_url_builder() 返回的构建器，
-        // 将当前请求的 URI 拼接到目标服务地址上。
-        // 注意：根据实际需求对 uri 的处理可能需要更多验证与调整。
         String targetUrl = client.get_url_builder()
                 .addPathSegments(uri.startsWith("/") ? uri.substring(1) : uri)
                 .build()
@@ -288,7 +372,6 @@ public class ProxyServer extends NanoHTTPD {
         try {
             okhttp3.Response forwardedResponse;
 
-            // 根据请求方法调用相应的转发函数
             if ("GET".equalsIgnoreCase(method)) {
                 forwardedResponse = client.get(targetUrl);
             } else if ("POST".equalsIgnoreCase(method)) {
@@ -299,13 +382,8 @@ public class ProxyServer extends NanoHTTPD {
                 return newFixedLengthResponse(
                         Response.Status.BAD_REQUEST,
                         "text/plain",
-                        "不支持的 HTTP 方法: " + method);
+                        "Unsupport method: " + method);
             }
-
-            // save Screenshot while forwarding the request
-//            Logger.println("[Proxy Server] Detected script method, saving screenshot.");
-//            okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
-//            saveScreenshot(screenshotResponse);
 
             return generateServerResponse(forwardedResponse);
         } catch (IOException ex) {
@@ -321,5 +399,9 @@ public class ProxyServer extends NanoHTTPD {
 
     public void tearDown(){
         mImageWriter.tearDown();
+    }
+
+    public void setVerbose(int verbose) {
+        this.mVerbose = verbose;
     }
 }
