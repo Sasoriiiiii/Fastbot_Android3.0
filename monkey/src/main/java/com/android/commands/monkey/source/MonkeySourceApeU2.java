@@ -1533,7 +1533,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
 
         String[] totalActivities = set.toArray(new String[0]);
         server.setCoverageStatistics(
-                new CoverageData(f, totalActivities, testedActivities)
+                new CoverageData(server.stepsCount, f, totalActivities, testedActivities)
         );
     }
 

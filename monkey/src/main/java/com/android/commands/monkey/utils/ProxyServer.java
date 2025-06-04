@@ -47,7 +47,7 @@ public class ProxyServer extends NanoHTTPD {
 
     public List<String> blockTrees;
 
-    private CoverageData mCoverageData;
+//    private CoverageData mCoverageData;
     private int mVerbose = 1;
 
     private HashSet<String> u2ExtMethods = new HashSet<>(
@@ -80,9 +80,9 @@ public class ProxyServer extends NanoHTTPD {
         String method = session.getMethod().name();
         String uri = session.getUri();
 
-        if (session.getMethod() == Method.GET && uri.equals("/getStat")) {
-            return getCoverageStatistics();
-        }
+//        if (session.getMethod() == Method.GET && uri.equals("/getStat")) {
+//            return getCoverageStatistics();
+//        }
 
         if (session.getMethod() == Method.GET && uri.equals("/stopMonkey"))
         {
@@ -193,26 +193,27 @@ public class ProxyServer extends NanoHTTPD {
     }
 
     public void setCoverageStatistics(CoverageData coverageData){
-        mCoverageData = coverageData;
+        saveLog(coverageData.toJSON(), "coverage.log");
+//        mCoverageData = coverageData;
     }
 
-    private Response getCoverageStatistics() {
-        try {
-            String data = gson.toJson(mCoverageData);
-            return newFixedLengthResponse(
-                    Response.Status.OK,
-                    "application/json",
-                    data
-            );
-        } catch (Exception e) {
-            Logger.println("Error generating coverage statistics: " + e.getMessage());
-            return newFixedLengthResponse(
-                    Response.Status.INTERNAL_ERROR,
-                    "application/json",
-                    "{\"error\": \"Failed to get coverage statistics\"}"
-            );
-        }
-    }
+//    private Response getCoverageStatistics() {
+//        try {
+//            String data = gson.toJson(mCoverageData);
+//            return newFixedLengthResponse(
+//                    Response.Status.OK,
+//                    "application/json",
+//                    data
+//            );
+//        } catch (Exception e) {
+//            Logger.println("Error generating coverage statistics: " + e.getMessage());
+//            return newFixedLengthResponse(
+//                    Response.Status.INTERNAL_ERROR,
+//                    "application/json",
+//                    "{\"error\": \"Failed to get coverage statistics\"}"
+//            );
+//        }
+//    }
 
     private Response stepMonkey(List<String> blockWidgets, List<String> blockTrees){
         this.blockWidgets = blockWidgets;
@@ -263,7 +264,7 @@ public class ProxyServer extends NanoHTTPD {
             obj.put("Type", "Monkey");
             obj.put("Info", op.toJson());
             obj.put("Screenshot", screenshot_file);
-            saveLog(obj);
+            saveLog(obj, "steps.log");
         } catch (JSONException e){
             Logger.errorPrintln("Error when recording log.");
             return false;
@@ -277,7 +278,7 @@ public class ProxyServer extends NanoHTTPD {
             obj.put("Type", "Script");
             obj.put("Info", U2ReqBody);
             obj.put("Screenshot", screenshot_file);
-            saveLog(obj);
+            saveLog(obj, "steps.log");
         } catch (JSONException e){
             Logger.errorPrintln("Error when recording log.");
             return false;
@@ -288,20 +289,20 @@ public class ProxyServer extends NanoHTTPD {
     private boolean recordLog(JSONObject logObject, String screenshot_file){
         JSONObject obj = new JSONObject();
         try {
-            obj.put("Type", "ScriptINFO");
+            obj.put("Type", "ScriptInfo");
             obj.put("Info", logObject.toString());
             obj.put("Screenshot", screenshot_file);
-            saveLog(obj);
+            saveLog(obj, "steps.log");
         } catch (JSONException e){
-            Logger.errorPrintln("Error when recording log.");
+            Logger.println("Error when recording log.");
             return false;
         }
         return true;
     }
 
 
-    private void saveLog(JSONObject obj){
-        String logFile = String.valueOf(new File(outputDir, "steps.log"));
+    private void saveLog(JSONObject obj, String file_name){
+        String logFile = String.valueOf(new File(outputDir, file_name));
         try {
             StoneUtils.writeStringToFile(logFile, obj.toString()+"\n", true);
         } catch (IOException e){
@@ -422,7 +423,8 @@ public class ProxyServer extends NanoHTTPD {
             return newFixedLengthResponse(
                     Response.Status.NO_CONTENT,
                     "text/plain",
-                    "");
+                    ""
+            );
         }
     }
 
@@ -453,7 +455,7 @@ public class ProxyServer extends NanoHTTPD {
             return newFixedLengthResponse(
                     Response.Status.INTERNAL_ERROR,
                     "text/plain",
-                    "请求转发错误: " + ex.getMessage());
+                    "Error When forwarding: " + ex.getMessage());
         }
         finally {
             this.useCache = false;
