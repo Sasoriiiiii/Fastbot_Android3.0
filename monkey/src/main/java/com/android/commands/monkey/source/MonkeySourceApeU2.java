@@ -758,13 +758,8 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
                     }
                 }
 
-                if (takeScreenshotForEveryStep) {
-                    checkOutputDir();
-                    File screenshotFile = new File(checkOutputDir(), String.format(stringFormatLocale,
-                            "step-%d-%s-%s-%s.png", timeStep, sid, aid, timeMillis));
-                    Logger.infoFormat("Saving screen shot to %s at step %d %s %s",
-                            screenshotFile, timeStep, sid, aid);
-                    // takeScreenshot(screenshotFile);
+                if (server.takeScreenshots) {
+                    server.setMonkeyOperate(operate);
                 }
 
                 ModelAction modelAction = new ModelAction(type, topActivityName, pointFloats, rect);

@@ -21,7 +21,7 @@ import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
 
-import static com.android.commands.monkey.utils.Config.takeScreenshotForEveryStep;
+// import static com.android.commands.monkey.utils.Config.takeScreenshotForEveryStep;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -53,6 +53,7 @@ public class ProxyServer extends NanoHTTPD {
     private HashSet<String> u2ExtMethods = new HashSet<>(
             Arrays.asList("click", "setText", "swipe", "drag", "setOrientation", "pressKey")
     );
+    private Operate mOperate;
 
 
     public boolean shouldUseCache() {
@@ -78,6 +79,9 @@ public class ProxyServer extends NanoHTTPD {
     public Response serve(IHTTPSession session) {
         String method = session.getMethod().name();
         String uri = session.getUri();
+
+        Logger.println("get method:" + method);
+        Logger.println("uri:" + uri);
 
         if (session.getMethod() == Method.GET && uri.equals("/getStat")) {
             return getCoverageStatistics();
@@ -109,6 +113,9 @@ public class ProxyServer extends NanoHTTPD {
                 requestBody = data.get("postData");
                 if (requestBody == null) {
                     requestBody = "";
+                }
+                if (mVerbose > 3){
+                    Logger.println(requestBody);
                 }
             } catch (IOException | ResponseException e) {
                 return newFixedLengthResponse(
@@ -148,11 +155,14 @@ public class ProxyServer extends NanoHTTPD {
         Response res = forward(uri, method, requestBody);
         if (!uri.equals("/ping"))
         {
-            if (takeScreenshotForEveryStep && u2ExtMethods.contains(method)) {
+            if (takeScreenshots && u2ExtMethods.contains(method)) {
                 // save Screenshot while forwarding the request
                 Logger.println("[Proxy Server] Detected script method: " + method +  ", saving screenshot.");
                 okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
-                saveScreenshot(screenshotResponse);
+                String screenshot_file = saveScreenshot(screenshotResponse);
+                if (screenshot_file != null){
+                    recordLog(requestBody, screenshot_file);
+                }
             }
         }
         return res;
@@ -197,20 +207,23 @@ public class ProxyServer extends NanoHTTPD {
         try {
             MonkeySemaphore.doneMonkey.acquire();
             if (mVerbose > 3){
-                Logger.println("[ProxyServer] release semaphore: doneMonkey");
+                Logger.println("[ProxyServer] acquired semaphore: doneMonkey");
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
 
         try {
-            Logger.println("[ProxyServer] Dumping hierarchy");
+            Logger.println("[ProxyServer] Finish monkey step. Dumping hierarchy");
             okhttp3.Response hierarchyResponse = scriptDriverClient.dumpHierarchy();
 
-            if (takeScreenshotForEveryStep){
+            if (takeScreenshots){
                 Logger.println("[ProxyServer] Taking Screenshot");
                 okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
-                saveScreenshot(screenshotResponse);
+                String screenshot_file = saveScreenshot(screenshotResponse);
+                if (screenshot_file != null){
+                    recordLog(mOperate, screenshot_file);
+                }
             }
 
             this.useCache = true;
@@ -234,9 +247,20 @@ public class ProxyServer extends NanoHTTPD {
         return true;
     }
 
-    private void recordLog(String screenshot){
-
+    private boolean recordLog(String U2ReqBody, String screenshot_file){
+        JSONObject obj = new JSONObject();
+        try {
+            obj.put("Type", "Script");
+            obj.put("Info", U2ReqBody);
+            obj.put("Screenshot", screenshot_file);
+            saveLog(obj);
+        } catch (JSONException e){
+            Logger.errorPrintln("Error when recording log.");
+            return false;
+        }
+        return true;
     }
+
 
     private void saveLog(JSONObject obj){
         String logFile = String.valueOf(new File(outputDir, "steps.log"));
@@ -276,9 +300,9 @@ public class ProxyServer extends NanoHTTPD {
     /**
      * Save the screenshot to /sdcard/screenshots
      * @param screenshotResponse The okhttp3.Response from ui automation server
-     * @return the screenshot is taken successfully
+     * @return the screenshot file_name
      */
-    private boolean saveScreenshot(okhttp3.Response screenshotResponse) {
+    private String saveScreenshot(okhttp3.Response screenshotResponse) {
         if (mVerbose > 3){
             Logger.println("[ProxyServer] Parsing bitmap with base64.");
         }
@@ -288,7 +312,7 @@ public class ProxyServer extends NanoHTTPD {
         }
         catch (IOException e) {
             Logger.errorPrintln("[ProxyServer] [Error]");
-            return false;
+            return null;
         }
 
         JsonRPCResponse res_obj = gson.fromJson(res, JsonRPCResponse.class);
@@ -301,10 +325,11 @@ public class ProxyServer extends NanoHTTPD {
         Logger.println("[ProxyServer] base64 Decoded");
         // Parse the bytes into bitmap
         Bitmap bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+        String screenshot_file = getScreenshotName();
 
         if (bitmap == null){
             Logger.println("[ProxyServer][Error] Failed to parse screenshot response to bitmap");
-            return false;
+            return null;
         } else {
             // Ensure screenshots dir
             File screenshotDir = new File(outputDir, "screenshots");
@@ -313,18 +338,18 @@ public class ProxyServer extends NanoHTTPD {
                 boolean created = screenshotDir.mkdirs();
                 if (!created) {
                     Logger.println("[ProxyServer][Error] Failed to create screenshots directory");
-                    return false;
+                    return null;
                 }
             }
 
             // create the screenshot file
             File screenshotFile = new File(
                 screenshotDir,
-                getScreenshotName()
+                screenshot_file
             );
             Logger.println("[ProxyServer] Adding the screenshot to ImageWriter");
             mImageWriter.add(bitmap, screenshotFile);
-            return true;
+            return screenshot_file;
         }
     }
 
@@ -403,5 +428,9 @@ public class ProxyServer extends NanoHTTPD {
 
     public void setVerbose(int verbose) {
         this.mVerbose = verbose;
+    }
+
+    public void setMonkeyOperate(Operate operate) {
+        mOperate = operate;
     }
 }
