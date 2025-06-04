@@ -80,9 +80,6 @@ public class ProxyServer extends NanoHTTPD {
         String method = session.getMethod().name();
         String uri = session.getUri();
 
-        Logger.println("get method:" + method);
-        Logger.println("uri:" + uri);
-
         if (session.getMethod() == Method.GET && uri.equals("/getStat")) {
             return getCoverageStatistics();
         }
@@ -155,9 +152,17 @@ public class ProxyServer extends NanoHTTPD {
         Response res = forward(uri, method, requestBody);
         if (!uri.equals("/ping"))
         {
-            if (takeScreenshots && u2ExtMethods.contains(method)) {
+            JSONObject jsonRPCBody;
+            String RPCmethod = "";
+            try {
+                jsonRPCBody = new JSONObject(requestBody);
+                RPCmethod = jsonRPCBody.getString("method");
+            }catch (JSONException e){
+                Logger.println("Error when parsing jsonrpc request body: " + requestBody);
+            }
+            if (takeScreenshots && u2ExtMethods.contains(RPCmethod)) {
                 // save Screenshot while forwarding the request
-                Logger.println("[Proxy Server] Detected script method: " + method +  ", saving screenshot.");
+                Logger.println("[Proxy Server] Detected script method: " + RPCmethod +  ", saving screenshot.");
                 okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
                 String screenshot_file = saveScreenshot(screenshotResponse);
                 if (screenshot_file != null){
@@ -265,7 +270,7 @@ public class ProxyServer extends NanoHTTPD {
     private void saveLog(JSONObject obj){
         String logFile = String.valueOf(new File(outputDir, "steps.log"));
         try {
-            StoneUtils.writeStringToFile(logFile, obj.toString(), true);
+            StoneUtils.writeStringToFile(logFile, obj.toString()+"\n", true);
         } catch (IOException e){
             Logger.errorPrintln("Error when saving log: " + logFile);
         }
