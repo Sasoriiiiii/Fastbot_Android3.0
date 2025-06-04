@@ -148,9 +148,27 @@ public class ProxyServer extends NanoHTTPD {
             return stepMonkey(req.getBlockWidgets(), req.getBlockTrees());
         }
 
-        Logger.println("[Proxy Server] Forwarding");
-        Response res = forward(uri, method, requestBody);
-        if (!uri.equals("/ping"))
+        if (uri.equals("/logScript") && session.getMethod() == Method.POST)
+        {
+            JSONObject jsonRPCBody;
+            try {
+                jsonRPCBody = new JSONObject(requestBody);
+                okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
+                String screenshot_file = saveScreenshot(screenshotResponse);
+                if (screenshot_file != null){
+                    recordLog(jsonRPCBody, screenshot_file);
+                }
+            }catch (JSONException e){
+                Logger.println("Error when parsing jsonrpc request body: " + requestBody);
+            }
+            return newFixedLengthResponse(
+                    Response.Status.OK,
+                    "text/plain",
+                    "OK"
+            );
+        }
+
+        if (uri.equals("/jsonrpc/0"))
         {
             JSONObject jsonRPCBody;
             String RPCmethod = "";
@@ -170,7 +188,8 @@ public class ProxyServer extends NanoHTTPD {
                 }
             }
         }
-        return res;
+        Logger.println("[Proxy Server] Forwarding");
+        return forward(uri, method, requestBody);
     }
 
     public void setCoverageStatistics(CoverageData coverageData){
@@ -257,6 +276,20 @@ public class ProxyServer extends NanoHTTPD {
         try {
             obj.put("Type", "Script");
             obj.put("Info", U2ReqBody);
+            obj.put("Screenshot", screenshot_file);
+            saveLog(obj);
+        } catch (JSONException e){
+            Logger.errorPrintln("Error when recording log.");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean recordLog(JSONObject logObject, String screenshot_file){
+        JSONObject obj = new JSONObject();
+        try {
+            obj.put("Type", "ScriptINFO");
+            obj.put("Info", logObject.toString());
             obj.put("Screenshot", screenshot_file);
             saveLog(obj);
         } catch (JSONException e){
