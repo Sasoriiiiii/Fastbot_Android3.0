@@ -133,6 +133,10 @@ public class ProxyServer extends NanoHTTPD {
             Logger.println("    takeScreenshots: " + takeScreenshots);
             Logger.println("    logStamp: " + logStamp);
             Logger.println("    outputDir: " + outputDir);
+            if (!outputDir.exists()){
+                Logger.println("Making Dir: " + outputDir.toString());
+                outputDir.mkdirs();
+            }
             return newFixedLengthResponse(
                     Response.Status.OK,
                     "text/plain",
@@ -150,14 +154,14 @@ public class ProxyServer extends NanoHTTPD {
 
         if (uri.equals("/logScript") && session.getMethod() == Method.POST)
         {
-            JSONObject jsonRPCBody;
             try {
-                jsonRPCBody = new JSONObject(requestBody);
-                okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
-                String screenshot_file = saveScreenshot(screenshotResponse);
-                if (screenshot_file != null){
-                    recordLog(jsonRPCBody, screenshot_file);
+                JSONObject jsonRPCBody = new JSONObject(requestBody);
+                String screenshot_file = "";
+                if (takeScreenshots){
+                    okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
+                    screenshot_file = saveScreenshot(screenshotResponse);
                 }
+                recordLog(jsonRPCBody, screenshot_file);
             }catch (JSONException e){
                 Logger.println("Error when parsing jsonrpc request body: " + requestBody);
             }
@@ -178,15 +182,14 @@ public class ProxyServer extends NanoHTTPD {
             }catch (JSONException e){
                 Logger.println("Error when parsing jsonrpc request body: " + requestBody);
             }
+            String screenshot_file = "";
             if (takeScreenshots && u2ExtMethods.contains(RPCmethod)) {
                 // save Screenshot while forwarding the request
                 Logger.println("[Proxy Server] Detected script method: " + RPCmethod +  ", saving screenshot.");
                 okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
-                String screenshot_file = saveScreenshot(screenshotResponse);
-                if (screenshot_file != null){
-                    recordLog(requestBody, screenshot_file);
-                }
+                screenshot_file = saveScreenshot(screenshotResponse);
             }
+            recordLog(requestBody, screenshot_file);
         }
         Logger.println("[Proxy Server] Forwarding");
         return forward(uri, method, requestBody);
@@ -194,26 +197,7 @@ public class ProxyServer extends NanoHTTPD {
 
     public void setCoverageStatistics(CoverageData coverageData){
         saveLog(coverageData.toJSON(), "coverage.log");
-//        mCoverageData = coverageData;
     }
-
-//    private Response getCoverageStatistics() {
-//        try {
-//            String data = gson.toJson(mCoverageData);
-//            return newFixedLengthResponse(
-//                    Response.Status.OK,
-//                    "application/json",
-//                    data
-//            );
-//        } catch (Exception e) {
-//            Logger.println("Error generating coverage statistics: " + e.getMessage());
-//            return newFixedLengthResponse(
-//                    Response.Status.INTERNAL_ERROR,
-//                    "application/json",
-//                    "{\"error\": \"Failed to get coverage statistics\"}"
-//            );
-//        }
-//    }
 
     private Response stepMonkey(List<String> blockWidgets, List<String> blockTrees){
         this.blockWidgets = blockWidgets;
@@ -241,16 +225,13 @@ public class ProxyServer extends NanoHTTPD {
         try {
             Logger.println("[ProxyServer] Finish monkey step. Dumping hierarchy");
             okhttp3.Response hierarchyResponse = scriptDriverClient.dumpHierarchy();
-
+            String screenshot_file = "";
             if (takeScreenshots){
                 Logger.println("[ProxyServer] Taking Screenshot");
                 okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
-                String screenshot_file = saveScreenshot(screenshotResponse);
-                if (screenshot_file != null){
-                    recordLog(mOperate, screenshot_file);
-                }
+                screenshot_file = saveScreenshot(screenshotResponse);
             }
-
+            recordLog(mOperate, screenshot_file);
             this.useCache = true;
             return generateServerResponse(hierarchyResponse, true);
         } catch (IOException e) {
