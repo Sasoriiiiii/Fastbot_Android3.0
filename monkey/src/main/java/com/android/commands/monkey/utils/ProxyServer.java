@@ -126,9 +126,7 @@ public class ProxyServer extends NanoHTTPD {
             InitRequest req = new Gson().fromJson(requestBody, InitRequest.class);
             takeScreenshots = req.isTakeScreenshots();
             logStamp = req.getLogStamp();
-            outputDir = new File(
-                    Environment.getExternalStorageDirectory(), "output_" + logStamp
-            );
+            outputDir = new File(new File("/sdcard"), "output_" + logStamp);
             Logger.println("Init: ");
             Logger.println("    takeScreenshots: " + takeScreenshots);
             Logger.println("    logStamp: " + logStamp);
@@ -243,6 +241,7 @@ public class ProxyServer extends NanoHTTPD {
         JSONObject obj = new JSONObject();
         try {
             obj.put("Type", "Monkey");
+            obj.put("Time", Logger.getCurrentTimeStamp());
             obj.put("Info", op.toJson());
             obj.put("Screenshot", screenshot_file);
             saveLog(obj, "steps.log");
@@ -257,6 +256,7 @@ public class ProxyServer extends NanoHTTPD {
         JSONObject obj = new JSONObject();
         try {
             obj.put("Type", "Script");
+            obj.put("Time", Logger.getCurrentTimeStamp());
             obj.put("Info", U2ReqBody);
             obj.put("Screenshot", screenshot_file);
             saveLog(obj, "steps.log");
@@ -271,6 +271,7 @@ public class ProxyServer extends NanoHTTPD {
         JSONObject obj = new JSONObject();
         try {
             obj.put("Type", "ScriptInfo");
+            obj.put("Time", Logger.getCurrentTimeStamp());
             obj.put("Info", logObject.toString());
             obj.put("Screenshot", screenshot_file);
             saveLog(obj, "steps.log");

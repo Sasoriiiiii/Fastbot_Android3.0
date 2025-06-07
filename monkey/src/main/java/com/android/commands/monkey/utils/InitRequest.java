@@ -7,7 +7,7 @@ public class InitRequest {
     @SerializedName("takeScreenshots")
     private boolean takeScreenshots;
 
-    @SerializedName("logStamp")
+    @SerializedName("Stamp")
     private String logStamp;
 
     public String getLogStamp(){

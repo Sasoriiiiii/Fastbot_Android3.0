@@ -1542,6 +1542,9 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
     }
 
     public void tearDown() {
+        if (!shouldProfile()){
+            u2GetCoverage();
+        }
         server.tearDown();
         printCoverage();
     }
