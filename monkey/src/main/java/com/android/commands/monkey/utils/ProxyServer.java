@@ -181,13 +181,15 @@ public class ProxyServer extends NanoHTTPD {
                 Logger.println("Error when parsing jsonrpc request body: " + requestBody);
             }
             String screenshot_file = "";
-            if (takeScreenshots && u2ExtMethods.contains(RPCmethod)) {
+            if (u2ExtMethods.contains(RPCmethod)){
+                Logger.println("[Proxy Server] Detected script method: " + RPCmethod);
+                if (takeScreenshots) {
+                    okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
+                    screenshot_file = saveScreenshot(screenshotResponse);
+                }
                 // save Screenshot while forwarding the request
-                Logger.println("[Proxy Server] Detected script method: " + RPCmethod +  ", saving screenshot.");
-                okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
-                screenshot_file = saveScreenshot(screenshotResponse);
+                recordLog(requestBody, screenshot_file);
             }
-            recordLog(requestBody, screenshot_file);
         }
         Logger.println("[Proxy Server] Forwarding");
         return forward(uri, method, requestBody);
