@@ -115,9 +115,7 @@ task clearJar(type: Delete) {
 task makeJar(type: Jar) {
     def srcPath = 'build/intermediates/aar_main_jar/debug/'
     def fileMonkey = file(srcPath + "classes.jar")
-    // 解压主 jar
     from zipTree(fileMonkey)
-    // 解压 fatJarDependencies 配置里的所有 jar 文件（包括 okhttp3 等依赖）
     from {
         configurations.fatJarDependencies.collect { dependency ->
             dependency.isDirectory() ? dependency : zipTree(dependency)
