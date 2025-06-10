@@ -371,13 +371,19 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
                 u2GetCoverage();
             }
             MonkeySemaphore.doneMonkey.release();
-            Logger.println("[MonkeySourceApeU2] release semaphore： doneMonkey");
+            if (mVerbose > 3){
+                Logger.println("[MonkeySourceApeU2] release semaphore： doneMonkey");
+            }
         }
         if (!hasEvent()) {
             try {
-                Logger.println("[MonkeySourceApeU2] wait semaphore: stepMonkey");
+                if (mVerbose > 3){
+                    Logger.println("[MonkeySourceApeU2] wait semaphore: stepMonkey");
+                }
                 MonkeySemaphore.stepMonkey.acquire();
-                Logger.println("[MonkeySourceApeU2] acquired semaphore: stepMonkey");
+                if (mVerbose > 3){
+                    Logger.println("[MonkeySourceApeU2] acquired semaphore: stepMonkey");
+                }
                 Logger.println("[MonkeySourceApeU2] stepsCount: " + server.stepsCount);
                 if (server.monkeyIsOver) {
                     Logger.println("[MonkeySourceApeU2] received signal: MonkeyIsOver");
@@ -758,14 +764,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
                     }
                 }
 
-                if (takeScreenshotForEveryStep) {
-                    checkOutputDir();
-                    File screenshotFile = new File(checkOutputDir(), String.format(stringFormatLocale,
-                            "step-%d-%s-%s-%s.png", timeStep, sid, aid, timeMillis));
-                    Logger.infoFormat("Saving screen shot to %s at step %d %s %s",
-                            screenshotFile, timeStep, sid, aid);
-                    // takeScreenshot(screenshotFile);
-                }
+                server.setMonkeyOperate(operate);
 
                 ModelAction modelAction = new ModelAction(type, topActivityName, pointFloats, rect);
                 modelAction.setThrottle(operate.throttle);
@@ -1538,11 +1537,14 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
 
         String[] totalActivities = set.toArray(new String[0]);
         server.setCoverageStatistics(
-                new CoverageData(f, totalActivities, testedActivities)
+                new CoverageData(server.stepsCount, f, totalActivities, testedActivities)
         );
     }
 
     public void tearDown() {
+        if (!shouldProfile()){
+            u2GetCoverage();
+        }
         server.tearDown();
         printCoverage();
     }
