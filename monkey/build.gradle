@@ -42,7 +42,7 @@ android {
         multiDexEnabled true
         // ndk push的时候记得把 arm7 和 8 加回去
         ndk {
-            abiFilters 'x86', 'x86_64'
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
     }
 
@@ -91,7 +91,6 @@ repositories {
 dependencies {
     compileOnly files('libs/framework.jar')
     implementation 'com.google.code.gson:gson:2.8.9'
-    //    implementation 'com.googlecode.jsonrpc4j:jsonrpc4j:1.7.0'
     implementation 'com.squareup.okhttp3:okhttp:3.12.12'
     implementation 'com.squareup.okhttp3:logging-interceptor:3.12.12'
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
@@ -103,7 +102,6 @@ gradle.projectsEvaluated {
             Set<File> fileSet = options.bootstrapClasspath.getFiles()
             List<File> newFileList = new ArrayList<File>()
             newFileList.add(new File("libs/framework.jar"))
-//            newFileList.add(new File("libs/framework35.jar"))
             newFileList.addAll(fileSet)
             options.bootstrapClasspath = files(newFileList.toArray())
         }
