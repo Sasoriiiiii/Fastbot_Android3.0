@@ -78,4 +78,13 @@ public class StoneUtils {
         return result;
     }
 
+    /***
+     * Ensure the dir exists.
+     */
+    public static void ensureDir(File dir) {
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+    }
+
 }

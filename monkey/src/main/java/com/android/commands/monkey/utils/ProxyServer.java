@@ -131,10 +131,7 @@ public class ProxyServer extends NanoHTTPD {
             Logger.println("    takeScreenshots: " + takeScreenshots);
             Logger.println("    logStamp: " + logStamp);
             Logger.println("    outputDir: " + outputDir);
-            if (!outputDir.exists()){
-                Logger.println("Making Dir: " + outputDir.toString());
-                outputDir.mkdirs();
-            }
+            StoneUtils.ensureDir(outputDir);
             return newFixedLengthResponse(
                     Response.Status.OK,
                     "text/plain",
@@ -286,6 +283,7 @@ public class ProxyServer extends NanoHTTPD {
 
 
     private void saveLog(JSONObject obj, String file_name){
+        StoneUtils.ensureDir(outputDir);
         String logFile = String.valueOf(new File(outputDir, file_name));
         try {
             StoneUtils.writeStringToFile(logFile, obj.toString()+"\n", true);

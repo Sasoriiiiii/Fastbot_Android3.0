@@ -43,6 +43,7 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.StrictMode;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.IWindowManager;
 import android.view.Surface;
 
@@ -955,7 +956,7 @@ public class Monkey {
             Logger.println("// App appears " + crashCount + " crash, " + oomCount + " anr, monkey using seed: " + mSeed);
         }
 
-        if (crashedAtCycle < mCount - 1) {
+        if (this.mEventSource instanceof MonkeySourceApeNative && crashedAtCycle < mCount - 1) {
             return crashedAtCycle;
         } else {
             if (mVerbose > 0) {
