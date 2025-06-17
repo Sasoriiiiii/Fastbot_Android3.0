@@ -14,7 +14,6 @@ import static com.android.commands.monkey.utils.Config.execSchemaEveryStartup;
 import static com.android.commands.monkey.utils.Config.historyRestartRate;
 import static com.android.commands.monkey.utils.Config.homeAfterNSecondsofsleep;
 import static com.android.commands.monkey.utils.Config.homingRate;
-import static com.android.commands.monkey.utils.Config.imageWriterCount;
 import static com.android.commands.monkey.utils.Config.refectchInfoCount;
 import static com.android.commands.monkey.utils.Config.refectchInfoWaitingInterval;
 import static com.android.commands.monkey.utils.Config.saveGUITreeToXmlEveryStep;
@@ -26,7 +25,6 @@ import static com.android.commands.monkey.utils.Config.startAfterDoScrollBottomA
 import static com.android.commands.monkey.utils.Config.startAfterDoScrollBottomActionTimes;
 import static com.android.commands.monkey.utils.Config.startAfterNSecondsofsleep;
 import static com.android.commands.monkey.utils.Config.swipeDuration;
-import static com.android.commands.monkey.utils.Config.takeScreenshotForEveryStep;
 import static com.android.commands.monkey.utils.Config.throttleForExecPreSchema;
 import static com.android.commands.monkey.utils.Config.throttleForExecPreShell;
 import static com.android.commands.monkey.utils.Config.useRandomClick;
@@ -1536,7 +1534,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         }
 
         String[] totalActivities = set.toArray(new String[0]);
-        server.setCoverageStatistics(
+        server.saveCoverageStatistics(
                 new CoverageData(server.stepsCount, f, totalActivities, testedActivities)
         );
     }

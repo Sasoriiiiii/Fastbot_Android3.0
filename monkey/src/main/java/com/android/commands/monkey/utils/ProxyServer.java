@@ -2,7 +2,6 @@ package com.android.commands.monkey.utils;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.Environment;
 
 import com.android.commands.monkey.fastbot.client.Operate;
 import com.android.commands.monkey.source.CoverageData;
@@ -80,10 +79,6 @@ public class ProxyServer extends NanoHTTPD {
         String method = session.getMethod().name();
         String uri = session.getUri();
 
-//        if (session.getMethod() == Method.GET && uri.equals("/getStat")) {
-//            return getCoverageStatistics();
-//        }
-
         if (session.getMethod() == Method.GET && uri.equals("/stopMonkey"))
         {
             monkeyIsOver = true;
@@ -126,12 +121,16 @@ public class ProxyServer extends NanoHTTPD {
             InitRequest req = new Gson().fromJson(requestBody, InitRequest.class);
             takeScreenshots = req.isTakeScreenshots();
             logStamp = req.getLogStamp();
-            outputDir = new File(new File("/sdcard"), "output_" + logStamp);
+            String deviceOutputRoot = req.getDeviceOutputRoot();
+            outputDir = new File(new File(deviceOutputRoot), "output_" + logStamp);
             Logger.println("Init: ");
             Logger.println("    takeScreenshots: " + takeScreenshots);
             Logger.println("    logStamp: " + logStamp);
             Logger.println("    outputDir: " + outputDir);
-            StoneUtils.ensureDir(outputDir);
+            if (!StoneUtils.ensureDir(outputDir)){
+                Logger.errorPrintln("Fail to create output dir: " + outputDir);
+                Logger.errorPrintln("Please specify a valid outputDir");
+            }
             return newFixedLengthResponse(
                     Response.Status.OK,
                     "text/plain",
@@ -192,7 +191,10 @@ public class ProxyServer extends NanoHTTPD {
         return forward(uri, method, requestBody);
     }
 
-    public void setCoverageStatistics(CoverageData coverageData){
+    public void saveCoverageStatistics(CoverageData coverageData){
+        if (mVerbose > 3){
+            Logger.println("Saving coverageData: server.stepsCount: " + stepsCount);
+        }
         saveLog(coverageData.toJSON(), "coverage.log");
     }
 
@@ -240,6 +242,7 @@ public class ProxyServer extends NanoHTTPD {
         JSONObject obj = new JSONObject();
         try {
             obj.put("Type", "Monkey");
+            obj.put("MonkeyStepsCount", stepsCount);
             obj.put("Time", Logger.getCurrentTimeStamp());
             obj.put("Info", op.toJson());
             obj.put("Screenshot", screenshot_file);
@@ -255,6 +258,7 @@ public class ProxyServer extends NanoHTTPD {
         JSONObject obj = new JSONObject();
         try {
             obj.put("Type", "Script");
+            obj.put("MonkeyStepsCount", stepsCount);
             obj.put("Time", Logger.getCurrentTimeStamp());
             obj.put("Info", U2ReqBody);
             obj.put("Screenshot", screenshot_file);
@@ -270,6 +274,7 @@ public class ProxyServer extends NanoHTTPD {
         JSONObject obj = new JSONObject();
         try {
             obj.put("Type", "ScriptInfo");
+            obj.put("MonkeyStepsCount", stepsCount);
             obj.put("Time", Logger.getCurrentTimeStamp());
             obj.put("Info", logObject.toString());
             obj.put("Screenshot", screenshot_file);
@@ -283,12 +288,16 @@ public class ProxyServer extends NanoHTTPD {
 
 
     private void saveLog(JSONObject obj, String file_name){
-        StoneUtils.ensureDir(outputDir);
-        String logFile = String.valueOf(new File(outputDir, file_name));
+        if (!StoneUtils.ensureDir(outputDir))
+        {
+            Logger.errorPrintln("outputDir: '" + outputDir + "' not exists.");
+        }
+        File logFile = new File(outputDir, file_name);
         try {
-            StoneUtils.writeStringToFile(logFile, obj.toString()+"\n", true);
+            StoneUtils.writeStringToFile(logFile, String.format("%s\n", obj.toString()), true);
         } catch (IOException e){
             Logger.errorPrintln("Error when saving log: " + logFile);
+            e.printStackTrace();
         }
     }
 

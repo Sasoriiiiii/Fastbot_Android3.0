@@ -10,6 +10,11 @@ public class InitRequest {
     @SerializedName("Stamp")
     private String logStamp;
 
+    @SerializedName("deviceOutputRoot")
+    private String deviceOutputRoot;
+
+    public String getDeviceOutputRoot() {return deviceOutputRoot;}
+
     public String getLogStamp(){
         return logStamp;
     }

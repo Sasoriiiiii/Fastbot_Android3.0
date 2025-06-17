@@ -78,13 +78,41 @@ public class StoneUtils {
         return result;
     }
 
+    public static boolean writeStringToFile(File file, String data, boolean isAppend) throws IOException{
+        if (!file.exists()){
+            boolean res = file.createNewFile();
+            if (!res) {
+                throw new IOException("Fail to create file: " + file);
+            }
+        }
+
+        FileWriter fileWriter = null;
+        try {
+            fileWriter = new FileWriter(file.getAbsolutePath(), isAppend);
+            fileWriter.write(data);
+        } catch (IOException e) {
+            Logger.println("cannot write to " + file.getAbsolutePath());
+        } finally {
+            if (fileWriter != null) {
+                try {
+                    fileWriter.close();
+                } catch (IOException e) {
+                    Logger.println("cannot close filewriter");
+                }
+            }
+        }
+        return file.exists();
+    }
+
     /***
      * Ensure the dir exists.
      */
-    public static void ensureDir(File dir) {
+    public static boolean ensureDir(File dir) {
         if (!dir.exists()) {
             dir.mkdirs();
         }
+        return dir.exists();
     }
+
 
 }
