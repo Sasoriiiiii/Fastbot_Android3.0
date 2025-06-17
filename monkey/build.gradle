@@ -22,10 +22,9 @@
 apply plugin: 'com.android.library'
 
 configurations {
-    fatJarDependencies {
+    thirdPartDependencies {
         canBeResolved = true
         canBeConsumed = false
-        // 将 implementation 的所有依赖都包含进来
         extendsFrom configurations.implementation
     }
 }
@@ -40,7 +39,6 @@ android {
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
-        // ndk push的时候记得把 arm7 和 8 加回去
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
@@ -80,8 +78,6 @@ android {
 
 }
 
-
-
 repositories {
     maven {
         url "https://dl.google.com/dl/android/maven2/"
@@ -116,13 +112,21 @@ task makeJar(type: Jar) {
     def srcPath = 'build/intermediates/aar_main_jar/debug/'
     def fileMonkey = file(srcPath + "classes.jar")
     from zipTree(fileMonkey)
-    from {
-        configurations.fatJarDependencies.collect { dependency ->
-            dependency.isDirectory() ? dependency : zipTree(dependency)
-        }
-    }
     archiveBaseName = 'monkey'
     destinationDirectory = file("build/libs/")
 }
 
 makeJar.dependsOn(clearJar, assemble)
+
+task makeThirdPartJar(type: Jar) {
+    description = 'Merge all runtime dependencies into kea2-third-party.jar'
+    from {
+        configurations.thirdPartDependencies.collect { dependency ->
+            dependency.isDirectory() ? dependency : zipTree(dependency)
+        }
+    }
+
+    archiveBaseName = 'kea2-thirdpart'
+    destinationDirectory = file("$buildDir/libs")
+}
+tasks.assemble.finalizedBy makeThirdPartyJar

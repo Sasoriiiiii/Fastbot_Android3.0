@@ -6,7 +6,7 @@ import java.util.Arrays;
 
 
 
-public class U2Client implements ScriptDriverClient {
+public class U2Client extends ScriptDriverClient {
 
     private static final U2Client INSTANCE = new U2Client();
     private final static Gson gson = new Gson();
