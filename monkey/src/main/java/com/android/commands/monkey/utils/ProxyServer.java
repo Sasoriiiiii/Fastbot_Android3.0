@@ -52,7 +52,7 @@ public class ProxyServer extends NanoHTTPD {
     private HashSet<String> u2ExtMethods = new HashSet<>(
             Arrays.asList("click", "setText", "swipe", "drag", "setOrientation", "pressKey")
     );
-    private Operate mOperate;
+    // private Operate mOperate;
 
 
     public boolean shouldUseCache() {
@@ -225,12 +225,6 @@ public class ProxyServer extends NanoHTTPD {
             Logger.println("[ProxyServer] Finish monkey step. Dumping hierarchy");
             okhttp3.Response hierarchyResponse = scriptDriverClient.dumpHierarchy();
             String screenshot_file = "";
-            if (takeScreenshots){
-                Logger.println("[ProxyServer] Taking Screenshot");
-                okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
-                screenshot_file = saveScreenshot(screenshotResponse);
-            }
-            recordLog(mOperate, screenshot_file);
             this.useCache = true;
             return generateServerResponse(hierarchyResponse, true);
         } catch (IOException e) {
@@ -461,7 +455,13 @@ public class ProxyServer extends NanoHTTPD {
         this.mVerbose = verbose;
     }
 
-    public void setMonkeyOperate(Operate operate) {
-        mOperate = operate;
+    public void recordMonkeyStep(Operate operate) {
+        String screenshot_file = "";
+        if (takeScreenshots){
+            Logger.println("[ProxyServer] Taking Screenshot");
+            okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
+            screenshot_file = saveScreenshot(screenshotResponse);
+        }
+        recordLog(operate, screenshot_file);
     }
 }

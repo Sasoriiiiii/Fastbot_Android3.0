@@ -762,7 +762,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
                     }
                 }
 
-                server.setMonkeyOperate(operate);
+                server.recordMonkeyStep(operate);
 
                 ModelAction modelAction = new ModelAction(type, topActivityName, pointFloats, rect);
                 modelAction.setThrottle(operate.throttle);
