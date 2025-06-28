@@ -28,11 +28,19 @@ public class U2Client extends ScriptDriverClient {
                 Arrays.asList(false, 50)
         );
 
-        try {
-            return client.post(url, gson.toJson(requestObj));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        int maxRetries = 3;
+        IOException lastEx = null;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                return client.post(url, gson.toJson(requestObj));
+            } catch (IOException e) {
+                lastEx = e;
+                if (i < maxRetries - 1) {
+                    StoneUtils.sleep(1000);
+                }
+            }
         }
+        throw new RuntimeException("All retries failed", lastEx);
     }
 
     public okhttp3.Response takeScreenshot() {

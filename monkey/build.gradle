@@ -129,4 +129,5 @@ task makeThirdPartJar(type: Jar) {
     archiveBaseName = 'kea2-thirdpart'
     destinationDirectory = file("$buildDir/libs")
 }
-tasks.assemble.finalizedBy makeThirdPartyJar
+
+tasks.assemble.finalizedBy makeThirdPartJar
