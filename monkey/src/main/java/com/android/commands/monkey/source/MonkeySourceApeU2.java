@@ -88,6 +88,7 @@ import com.android.commands.monkey.utils.MonkeyUtils;
 import com.android.commands.monkey.utils.OkHttpClient;
 import com.android.commands.monkey.utils.ProxyServer;
 import com.android.commands.monkey.utils.RandomHelper;
+import com.android.commands.monkey.utils.StoneUtils;
 import com.android.commands.monkey.utils.U2Client;
 import com.android.commands.monkey.utils.UUIDHelper;
 import com.android.commands.monkey.utils.Utils;
@@ -192,6 +193,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
      * Record tested activities, but there are activities that may miss quick jumps
      */
     private HashSet<String> activityHistory = new HashSet<>();
+    private HashMap<String, Integer> activityCountHistory = new HashMap();
     private String currentActivity = "";
     /**
      * appliaction total、stub、plugin activity
@@ -273,7 +275,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         Logger.println("// device uuid is " + did);
 
         this.u2Client = U2Client.getInstance();
-        this.server = new ProxyServer(8090, u2Client);
+        this.server = new ProxyServer(8090, u2Client, this);
         try {
             server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
             Logger.println("[MonkeySourceApeU2] proxyServer started. Listening tcp:8090");
@@ -304,7 +306,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         mVerbose = verbose;
     }
 
-    protected void checkAppActivity() {
+    public void checkAppActivity() {
         ComponentName cn = getTopActivityComponentName();
         if (cn == null) {
             Logger.println("// get activity api error");
@@ -320,11 +322,34 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
             if (!this.currentActivity.equals(className)) {
                 this.currentActivity = className;
                 activityHistory.add(this.currentActivity);
-                Logger.println("// current activity is " + this.currentActivity);
+                activityCountHistory.put(
+                        currentActivity,
+                        StoneUtils.getOrDefaultFromHashMap(activityCountHistory, this.currentActivity, 0) + 1
+                );
+                Logger.println("// [Monkey] current activity is " + this.currentActivity);
                 timestamp++;
             }
         }else
             dealWithBlockedActivity(cn);
+    }
+
+    public void updateActivityHistory() {
+        ComponentName cn = getTopActivityComponentName();
+        if (cn == null) {
+            Logger.println("// get activity api error");
+            return;
+        }
+        String className = cn.getClassName();
+        if (!this.currentActivity.equals(className)) {
+            this.currentActivity = className;
+            activityHistory.add(this.currentActivity);
+            activityCountHistory.put(
+                    currentActivity,
+                    StoneUtils.getOrDefaultFromHashMap(activityCountHistory, this.currentActivity, 0) + 1
+            );
+            Logger.println("// [Script] current activity is " + this.currentActivity);
+            timestamp++;
+        }
     }
 
     /**
@@ -720,6 +745,10 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
 //                Logger.println(stringOfGuiTree);
 
                 Operate operate = AiClient.getAction(topActivityName.getClassName(), stringOfGuiTree);
+
+                // record the monkeyStep
+                server.recordMonkeyStep(operate);
+
                 operate.throttle += (int) this.mThrottle;
                 // For user specified actions, during executing, fuzzing is not allowed.
                 allowFuzzing = operate.allowFuzzing;
@@ -762,7 +791,6 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
                     }
                 }
 
-                server.recordMonkeyStep(operate);
 
                 ModelAction modelAction = new ModelAction(type, topActivityName, pointFloats, rect);
                 modelAction.setThrottle(operate.throttle);
@@ -1518,6 +1546,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         HashSet<String> set = mTotalActivities;
 
         String[] testedActivities = this.activityHistory.toArray(new String[0]);
+
         int j = 0;
         String activity = "";
         for (String testedActivity : testedActivities) {
@@ -1535,7 +1564,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
 
         String[] totalActivities = set.toArray(new String[0]);
         server.saveCoverageStatistics(
-                new CoverageData(server.stepsCount, f, totalActivities, testedActivities)
+                new CoverageData(server.stepsCount, f, totalActivities, testedActivities, activityCountHistory)
         );
     }
 

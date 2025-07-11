@@ -4,14 +4,12 @@
 
 package com.android.commands.monkey.utils;
 
-import android.annotation.SuppressLint;
-import android.util.Log;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 
 /**
  * @author Zhang Zhao
@@ -120,5 +118,10 @@ public class StoneUtils {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public static <K, V> V getOrDefaultFromHashMap(HashMap<K, V> map, K key, V defaultValue) {
+        V value = map.get(key);
+        return (value != null) ? value : defaultValue;
     }
 }
