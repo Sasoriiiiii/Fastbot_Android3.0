@@ -2033,18 +2033,18 @@ public class Monkey {
             boolean allow = MonkeyUtils.getPackageFilter().checkEnteringPackage(pkg) && allowActivity || (DEBUG_ALLOW_ANY_STARTS != 0);
 
 
-            if (mVerbose > 0) {
-                // StrictMode's disk checks end up catching this on
-                // userdebug/eng builds due to PrintStream going to a
-                // FileOutputStream in the end (perhaps only when
-                // redirected to a file?) So we allow disk writes
-                // around this region for the monkey to minimize
-                // harmless dropbox uploads from monkeys.
-                StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskWrites();
-                Logger.println(
-                        "    // " + (allow ? "Allowing" : "Rejecting") + " start of " + intent + " in package " + pkg);
-                StrictMode.setThreadPolicy(savedPolicy);
-            }
+//            if (mVerbose > 0) {
+//                // StrictMode's disk checks end up catching this on
+//                // userdebug/eng builds due to PrintStream going to a
+//                // FileOutputStream in the end (perhaps only when
+//                // redirected to a file?) So we allow disk writes
+//                // around this region for the monkey to minimize
+//                // harmless dropbox uploads from monkeys.
+//                StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskWrites();
+//                Logger.println(
+//                        "    // " + (allow ? "Allowing" : "Rejecting") + " start of " + intent + " in package " + pkg);
+//                StrictMode.setThreadPolicy(savedPolicy);
+//            }
             return allow;
         }
 
