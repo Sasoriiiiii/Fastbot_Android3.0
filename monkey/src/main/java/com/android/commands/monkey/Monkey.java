@@ -1969,6 +1969,9 @@ public class Monkey {
      */
     private class ActivityController extends IActivityController.Stub {
 
+        // allow interacting with the third-part app 10 times when using script.
+        private int previous_allow_count = 0;
+
         public boolean activityStarting(Intent intent, String pkg) {
 
             if (allowStartActivityEscapeAny && ("".equals(allowStartActivityEscapePackageName) || pkg.equals(allowStartActivityEscapePackageName))) {
@@ -2031,7 +2034,7 @@ public class Monkey {
             }
 
             boolean allow = MonkeyUtils.getPackageFilter().checkEnteringPackage(pkg) && allowActivity || (DEBUG_ALLOW_ANY_STARTS != 0);
-
+            allow = allowExplorationInThridpartActivites(allow);
 
             if (mVerbose > 0) {
                 // StrictMode's disk checks end up catching this on
@@ -2045,6 +2048,20 @@ public class Monkey {
                         "    // " + (allow ? "Allowing" : "Rejecting") + " start of " + intent + " in package " + pkg);
                 StrictMode.setThreadPolicy(savedPolicy);
             }
+            return allow;
+        }
+
+        /**
+         * Allow exploration in thirdpart activities for 10 times (during script methods)
+         * @param allow the original allow tag
+         * @return boolean allow
+         */
+        private boolean allowExplorationInThridpartActivites(boolean allow) {
+            if (!allow && previous_allow_count < 10) {
+                previous_allow_count++;
+                return true;
+            }
+            previous_allow_count = 0;
             return allow;
         }
 
