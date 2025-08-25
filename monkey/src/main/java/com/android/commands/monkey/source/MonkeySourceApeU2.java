@@ -286,6 +286,10 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         }
     }
 
+    public File getDeviceOutputDir(){
+        return server.getDeviceOutputDir();
+    }
+
     /**
      * If this activity could be interacted with. Should be in white list or not in blacklist or
      * not specified.

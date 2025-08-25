@@ -1425,6 +1425,15 @@ public class Monkey {
         return true;
     }
 
+    private boolean shouldStop(int cycleCounter){
+        // Check user specified stopping condition
+        if (mRunningMillis < 0) {
+            return cycleCounter >= mCount;
+        } else {
+            return SystemClock.elapsedRealtime() > mEndTime;
+        }
+    }
+
     /**
      * Run mCount cycles and see if we hit any crashers.
      *
@@ -1452,18 +1461,6 @@ public class Monkey {
 
         // TO DO : The count should apply to each of the script file.
         while (!systemCrashed) {
-
-            // Check user specified stopping condition
-            if (mRunningMillis < 0) {
-                if (cycleCounter >= mCount) {
-                    break;
-                }
-            } else {
-                currentTime = SystemClock.elapsedRealtime();
-                if (currentTime > mEndTime) {
-                    break;
-                }
-            }
 
             synchronized (this) {
                 if (mRequestHookAppCrashed) {
@@ -1573,6 +1570,9 @@ public class Monkey {
 
             // generate next event and inject it
             MonkeyEvent ev = mEventSource.getNextEvent();
+            if (shouldStop(cycleCounter)){
+                break;
+            }
             if (ev != null) {
                 int injectCode = ev.injectEvent(mWm, mAm, mVerbose);
                 if (injectCode == MonkeyEvent.INJECT_FAIL) {
@@ -1770,6 +1770,7 @@ public class Monkey {
     private void writeDumpLog(String logTimeStamp, String msg) {
         FileWriter fileWriter = null;
 
+
         try {
             fileWriter = new FileWriter(new File(mOutputDirectory + "/" + logTimeStamp + "/", logTimeStamp + ".log").getAbsolutePath(), true);
             fileWriter.write(String.format("%s\n", msg));
@@ -1796,6 +1797,24 @@ public class Monkey {
                     fileWriter.close();
                 } catch (IOException e) {
                     Logger.println("cannot close dump filewriter");
+                }
+            }
+        }
+
+        if (mEventSource instanceof MonkeySourceApeU2){
+            String outFile = new File(((MonkeySourceApeU2) mEventSource).getDeviceOutputDir(), "crash-dump.log").getAbsolutePath();
+            try {
+                fileWriter = new FileWriter(outFile, true);
+                fileWriter.write(String.format("%s\n", msg));
+            } catch (IOException e) {
+                Logger.println("cannot write dump msg to " + outFile);
+            } finally {
+                if (fileWriter != null) {
+                    try {
+                        fileWriter.close();
+                    } catch (IOException e) {
+                        Logger.println("cannot close dump filewriter");
+                    }
                 }
             }
         }

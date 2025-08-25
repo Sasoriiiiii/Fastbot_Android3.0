@@ -43,6 +43,11 @@ public class ProxyServer extends NanoHTTPD {
     private File outputDir;
     private ImageWriterQueue mImageWriter;
 
+    /**
+     * Server can tearDown when no script executing
+     * */
+    private boolean canTearDown;
+
 
     public boolean monkeyIsOver;
     public List<String> blockWidgets;
@@ -194,6 +199,10 @@ public class ProxyServer extends NanoHTTPD {
         }
         Logger.println("[Proxy Server] Forwarding");
         return forward(uri, method, requestBody);
+    }
+
+    public File getDeviceOutputDir(){
+        return outputDir;
     }
 
     public void saveCoverageStatistics(CoverageData coverageData){
