@@ -447,6 +447,8 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         return (!hasEvent() && lastMQEvents == 1);
     }
 
+    public int getStepsCount() {return server.stepsCount;}
+
 
     /**
      * generate an activity event

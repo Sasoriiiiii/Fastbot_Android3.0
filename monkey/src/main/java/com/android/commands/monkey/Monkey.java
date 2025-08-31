@@ -1802,7 +1802,9 @@ public class Monkey {
         }
 
         if (mEventSource instanceof MonkeySourceApeU2){
-            String outFile = new File(((MonkeySourceApeU2) mEventSource).getDeviceOutputDir(), "crash-dump.log").getAbsolutePath();
+            MonkeySourceApeU2 monkeySourceApeU2 = ((MonkeySourceApeU2) mEventSource);
+            String outFile = new File(monkeySourceApeU2.getDeviceOutputDir(), "crash-dump.log").getAbsolutePath();
+            msg = String.format("StepsCount: %d\n%s", monkeySourceApeU2.getStepsCount(), msg);
             try {
                 fileWriter = new FileWriter(outFile, true);
                 fileWriter.write(String.format("%s\n", msg));
@@ -2059,8 +2061,10 @@ public class Monkey {
         private boolean allowExplorationInThridpartActivites(boolean allow) {
             if (!allow && previous_allow_count < 10) {
                 previous_allow_count++;
+                Logger.println("Interacting with third part activity. Cnt: " + previous_allow_count + "/10. Allowed.");
                 return true;
             }
+            Logger.println("Interacting with third part activity. Cnt: " + previous_allow_count + "/10. Denied.");
             previous_allow_count = 0;
             return allow;
         }
