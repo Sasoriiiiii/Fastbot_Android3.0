@@ -1974,6 +1974,9 @@ public class Monkey {
         // allow interacting with the third-part app 10 times when using script.
         private int previous_allow_count = 0;
 
+        // allow interacting with the third-part app 10 times when using script.
+        private int previous_allow_count = 0;
+
         public boolean activityStarting(Intent intent, String pkg) {
 
             if (allowStartActivityEscapeAny && ("".equals(allowStartActivityEscapePackageName) || pkg.equals(allowStartActivityEscapePackageName))) {
@@ -2036,6 +2039,7 @@ public class Monkey {
             }
 
             boolean allow = MonkeyUtils.getPackageFilter().checkEnteringPackage(pkg) && allowActivity || (DEBUG_ALLOW_ANY_STARTS != 0);
+            allow = allowExplorationInThridpartActivites(allow);
             allow = allowExplorationInThridpartActivites(allow);
 
             if (mVerbose > 0) {
