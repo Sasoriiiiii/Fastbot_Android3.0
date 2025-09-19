@@ -80,7 +80,6 @@ import com.android.commands.monkey.provider.SchemaProvider;
 import com.android.commands.monkey.provider.ShellProvider;
 import com.android.commands.monkey.tree.TreeBuilder;
 import com.android.commands.monkey.utils.Config;
-import com.android.commands.monkey.utils.ImageWriterQueue;
 import com.android.commands.monkey.utils.JsonRPCResponse;
 import com.android.commands.monkey.utils.Logger;
 import com.android.commands.monkey.utils.MonkeySemaphore;
@@ -185,10 +184,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
     private int statusBarHeight = bytestStatusBarHeight;
 
     private File mOutputDirectory;
-    /**
-     * screenshot asynchronous storage queue
-     */
-    private ImageWriterQueue[] mImageWriters;
+
     /**
      * Record tested activities, but there are activities that may miss quick jumps
      */
@@ -288,6 +284,14 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
 
     public File getDeviceOutputDir(){
         return server.getDeviceOutputDir();
+    }
+
+    public void flushImageQueue() {
+        server.flushImageQueue();
+    }
+
+    public String peekImageQueue() {
+        return server.peekImageQueue();
     }
 
     /**

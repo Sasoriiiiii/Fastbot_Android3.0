@@ -28,8 +28,7 @@ import java.util.LinkedList;
 
 public class ImageWriterQueue implements Runnable {
 
-
-    private LinkedList<Req> requestQueue = new LinkedList<Req>();
+    protected LinkedList<Req> requestQueue = new LinkedList<Req>();
 
     @Override
     public void run() {
@@ -46,7 +45,7 @@ public class ImageWriterQueue implements Runnable {
         }
     }
 
-    private void writePNG(Req req) {
+    protected void writePNG(Req req) {
         Bitmap map = req.map;
         File dst = req.dst;
         if (map == null) {
@@ -98,6 +97,15 @@ public class ImageWriterQueue implements Runnable {
         public Req(Bitmap map, File dst) {
             this.map = map;
             this.dst = dst;
+        }
+    }
+
+    public String peekLast(){
+        if (!requestQueue.isEmpty()) {
+            return requestQueue.peekLast().dst.getAbsolutePath();
+        } else {
+            Logger.println("requestQueue is empty");
+            return "";
         }
     }
 }

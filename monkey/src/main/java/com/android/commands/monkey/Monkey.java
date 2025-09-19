@@ -1803,8 +1803,11 @@ public class Monkey {
 
         if (mEventSource instanceof MonkeySourceApeU2){
             MonkeySourceApeU2 monkeySourceApeU2 = ((MonkeySourceApeU2) mEventSource);
+            String crashScreen = monkeySourceApeU2.peekImageQueue();
+            monkeySourceApeU2.flushImageQueue();
+            msg = String.format("StepsCount: %d\nCrashScreen: %s\n%s", monkeySourceApeU2.getStepsCount(), crashScreen, msg);
+
             String outFile = new File(monkeySourceApeU2.getDeviceOutputDir(), "crash-dump.log").getAbsolutePath();
-            msg = String.format("StepsCount: %d\n%s", monkeySourceApeU2.getStepsCount(), msg);
             try {
                 fileWriter = new FileWriter(outFile, true);
                 fileWriter.write(String.format("%s\n", msg));
@@ -1970,9 +1973,6 @@ public class Monkey {
      * Monitor operations happening in the system.
      */
     private class ActivityController extends IActivityController.Stub {
-
-        // allow interacting with the third-part app 10 times when using script.
-        private int previous_allow_count = 0;
 
         // allow interacting with the third-part app 10 times when using script.
         private int previous_allow_count = 0;

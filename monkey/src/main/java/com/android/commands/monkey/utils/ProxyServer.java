@@ -3,7 +3,6 @@ package com.android.commands.monkey.utils;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
-import com.android.commands.monkey.events.MonkeyEventSource;
 import com.android.commands.monkey.fastbot.client.Operate;
 import com.android.commands.monkey.source.CoverageData;
 import com.android.commands.monkey.source.MonkeySourceApeU2;
@@ -43,16 +42,11 @@ public class ProxyServer extends NanoHTTPD {
     private File outputDir;
     private ImageWriterQueue mImageWriter;
 
-    /**
-     * Server can tearDown when no script executing
-     * */
-    private boolean canTearDown;
-
-
     public boolean monkeyIsOver;
     public List<String> blockWidgets;
 
     public List<String> blockTrees;
+    public int preFailureScreenshots = 0;
 
 //    private CoverageData mCoverageData;
     private int mVerbose = 1;
@@ -76,11 +70,26 @@ public class ProxyServer extends NanoHTTPD {
         this.client = OkHttpClient.getInstance();
         this.scriptDriverClient = scriptDriverClient;
         this.eventSource = eventSource;
+    }
 
-        // start the image writer thread
-        mImageWriter = new ImageWriterQueue();
+    private void startImageWriter(){
+        if (preFailureScreenshots == 0){
+            Logger.println("take all screenshots.");
+            mImageWriter = new ImageWriterQueue();
+        } else {
+            Logger.println(String.format("take %d screenshots before failure", preFailureScreenshots));
+            mImageWriter = new CacheImageWriterQueue();
+        }
         Thread imageThread = new Thread(mImageWriter);
         imageThread.start();
+    }
+
+    public void flushImageQueue() {
+        mImageWriter.flush();
+    }
+
+    public String peekImageQueue() {
+        return mImageWriter.peekLast();
     }
 
     @Override
@@ -130,16 +139,19 @@ public class ProxyServer extends NanoHTTPD {
             InitRequest req = new Gson().fromJson(requestBody, InitRequest.class);
             takeScreenshots = req.isTakeScreenshots();
             logStamp = req.getLogStamp();
+            preFailureScreenshots = req.getPreFailureScreenshots();
             String deviceOutputRoot = req.getDeviceOutputRoot();
             outputDir = new File(new File(deviceOutputRoot), "output_" + logStamp);
             Logger.println("Init: ");
             Logger.println("    takeScreenshots: " + takeScreenshots);
+            Logger.println("    preFailureScreenshots: " + preFailureScreenshots);
             Logger.println("    logStamp: " + logStamp);
             Logger.println("    outputDir: " + outputDir);
             if (!StoneUtils.ensureDir(outputDir)){
                 Logger.errorPrintln("Fail to create output dir: " + outputDir);
                 Logger.errorPrintln("Please specify a valid outputDir");
             }
+            startImageWriter();
             return newFixedLengthResponse(
                     Response.Status.OK,
                     "text/plain",
@@ -165,6 +177,10 @@ public class ProxyServer extends NanoHTTPD {
                     screenshot_file = saveScreenshot(screenshotResponse);
                 }
                 recordLog(jsonRPCBody, screenshot_file);
+                String state = jsonRPCBody.getString("state");
+                if (state.equals("fail") || state.equals("error")){
+                    flushImageQueue();
+                }
             }catch (JSONException e){
                 Logger.println("Error when parsing jsonrpc request body: " + requestBody);
             }

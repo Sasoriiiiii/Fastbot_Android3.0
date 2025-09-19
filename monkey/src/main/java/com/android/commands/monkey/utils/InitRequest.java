@@ -7,13 +7,18 @@ public class InitRequest {
     @SerializedName("takeScreenshots")
     private boolean takeScreenshots;
 
-    @SerializedName("Stamp")
+    @SerializedName("preFailureScreenshots")
+    private int preFailureScreenshots;
+
+    @SerializedName("logStamp")
     private String logStamp;
 
     @SerializedName("deviceOutputRoot")
     private String deviceOutputRoot;
 
     public String getDeviceOutputRoot() {return deviceOutputRoot;}
+
+    public int getPreFailureScreenshots() {return preFailureScreenshots;}
 
     public String getLogStamp(){
         return logStamp;
