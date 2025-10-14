@@ -33,8 +33,8 @@ public class ProxyServer extends NanoHTTPD {
     private final ScriptDriverClient scriptDriverClient;
     private final static Gson gson = new Gson();
     private final MonkeySourceApeU2 eventSource;
-    private boolean useCache = false;
     private String hierarchyResponseCache;
+    public boolean useCache = false;
     public boolean takeScreenshots = false;
     public String logStamp;
     public int stepsCount = 0;
@@ -56,10 +56,6 @@ public class ProxyServer extends NanoHTTPD {
     );
     // private Operate mOperate;
 
-
-    public boolean shouldUseCache() {
-        return this.useCache;
-    }
 
     public String getHierarchyResponseCache() {
         return this.hierarchyResponseCache;
@@ -204,6 +200,8 @@ public class ProxyServer extends NanoHTTPD {
             }
             String screenshot_file = "";
             if (u2ExtMethods.contains(RPCmethod)){
+                // An ExtMehod will lead to state transition, making the useCache false.
+                this.useCache = false;
                 Logger.println("[Proxy Server] Detected script method: " + RPCmethod);
                 if (takeScreenshots) {
                     okhttp3.Response screenshotResponse = scriptDriverClient.takeScreenshot();
@@ -254,7 +252,6 @@ public class ProxyServer extends NanoHTTPD {
         try {
             Logger.println("[ProxyServer] Finish monkey step. Dumping hierarchy");
             okhttp3.Response hierarchyResponse = scriptDriverClient.dumpHierarchy();
-            String screenshot_file = "";
             this.useCache = true;
             return generateServerResponse(hierarchyResponse, true);
         } catch (IOException e) {
@@ -471,9 +468,6 @@ public class ProxyServer extends NanoHTTPD {
                     Response.Status.INTERNAL_ERROR,
                     "text/plain",
                     "Error When forwarding: " + ex.getMessage());
-        }
-        finally {
-            this.useCache = false;
         }
     }
 

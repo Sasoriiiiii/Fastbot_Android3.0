@@ -505,7 +505,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
     public void dumpHierarchy() {
         String res;
 
-        if (server.shouldUseCache()){
+        if (server.useCache){
             // Use the cached hierarchy response in the server.
             Logger.println("[MonkeySourceApeU2] Latest event is MonkeyEvent. Use the cached hierarchy.");
             res = server.getHierarchyResponseCache();
@@ -519,7 +519,6 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
                 throw new RuntimeException(e);
             }
         }
-
 
         JsonRPCResponse res_obj = gson.fromJson(res, JsonRPCResponse.class);
         String xmlString = res_obj.getResult();
