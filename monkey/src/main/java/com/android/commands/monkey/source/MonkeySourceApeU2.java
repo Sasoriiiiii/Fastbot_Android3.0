@@ -159,6 +159,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
      * The last event numbers in MQ.
      */
     private int lastMQEvents = 0;
+    private boolean fuzzingStarted = false;
     /**
      * debug level
      */
@@ -421,6 +422,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
                     return null;
                 }
                 generateEvents();
+                fuzzingStarted = true;
             } catch (RuntimeException e) {
                 Logger.errorPrintln(e.getMessage());
                 e.printStackTrace();
@@ -431,8 +433,6 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
             }
         }
         mEventCount++;
-        lastMQEvents = mQ.size();
-        //  Logger.println("MQ Events Size is " + lastMQEvents);
         return popEvent();
     }
 
@@ -448,7 +448,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
      * @return a monkey event was finished
      */
     private boolean checkMonkeyStepDone() {
-        return (!hasEvent() && lastMQEvents == 1);
+        return (!hasEvent() && fuzzingStarted);
     }
 
     public int getStepsCount() {return server.stepsCount;}
