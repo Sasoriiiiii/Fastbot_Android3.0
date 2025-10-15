@@ -29,6 +29,7 @@ import java.util.LinkedList;
 public class ImageWriterQueue implements Runnable {
 
     protected LinkedList<Req> requestQueue = new LinkedList<Req>();
+    public String lastImage = "";
 
     @Override
     public void run() {
@@ -63,6 +64,8 @@ public class ImageWriterQueue implements Runnable {
     }
 
     public synchronized void add(Bitmap map, File dst) {
+        lastImage = dst.getName();
+//        Logger.println("[ImageWriterQueue] Last image: " + lastImage);
         requestQueue.add(new Req(map, dst));
         if (requestQueue.size() > Config.flushImagesThreshold) {
             Logger.format("ImageQueue is too full (%d)! Try to flush it.", requestQueue.size());
@@ -97,15 +100,6 @@ public class ImageWriterQueue implements Runnable {
         public Req(Bitmap map, File dst) {
             this.map = map;
             this.dst = dst;
-        }
-    }
-
-    public String peekLast(){
-        if (!requestQueue.isEmpty()) {
-            return requestQueue.peekLast().dst.getAbsolutePath();
-        } else {
-            Logger.println("requestQueue is empty");
-            return "";
         }
     }
 }

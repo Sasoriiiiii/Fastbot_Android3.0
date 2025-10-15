@@ -85,7 +85,7 @@ public class ProxyServer extends NanoHTTPD {
     }
 
     public String peekImageQueue() {
-        return mImageWriter.peekLast();
+        return mImageWriter.lastImage;
     }
 
     @Override
