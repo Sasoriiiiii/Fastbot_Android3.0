@@ -155,10 +155,8 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
      * monkey event queue
      */
     private final MonkeyEventQueue mQ;
-    /**
-     * The last event numbers in MQ.
-     */
-    private int lastMQEvents = 0;
+
+    private int lastProfileStepsCount = 0;
     private boolean fuzzingStarted = false;
     /**
      * debug level
@@ -400,7 +398,7 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         if (checkMonkeyStepDone()){
             if (shouldProfile()){
                 Logger.println("[MonkeySourceApeU2] Profiling coverage...");
-                u2GetCoverage();
+                profileCoverage();
             }
             MonkeySemaphore.doneMonkey.release();
             if (mVerbose > 3){
@@ -1551,9 +1549,8 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         Utils.activityStatistics(mOutputDirectory, testedActivities, totalActivities, new ArrayList<Map<String, String>>(), f, new HashMap<String, Integer>());
     }
 
-    private void u2GetCoverage() {
+    private void profileCoverage() {
         HashSet<String> set = mTotalActivities;
-
         String[] testedActivities = this.activityHistory.toArray(new String[0]);
 
         int j = 0;
@@ -1572,15 +1569,16 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         }
 
         String[] totalActivities = set.toArray(new String[0]);
-        server.saveCoverageStatistics(
-                new CoverageData(server.stepsCount, f, totalActivities, testedActivities, activityCountHistory)
-        );
+        if (lastProfileStepsCount != server.stepsCount){
+            lastProfileStepsCount = server.stepsCount;
+            server.saveCoverageStatistics(
+                    new CoverageData(server.stepsCount, f, totalActivities, testedActivities, activityCountHistory)
+            );
+        }
     }
 
     public void tearDown() {
-        if (!shouldProfile()){
-            u2GetCoverage();
-        }
+        profileCoverage();
         server.tearDown();
         printCoverage();
     }

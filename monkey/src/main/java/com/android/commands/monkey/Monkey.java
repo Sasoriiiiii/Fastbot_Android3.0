@@ -2039,8 +2039,6 @@ public class Monkey {
             }
 
             boolean allow = MonkeyUtils.getPackageFilter().checkEnteringPackage(pkg) && allowActivity || (DEBUG_ALLOW_ANY_STARTS != 0);
-            allow = allowExplorationInThridpartActivites(allow);
-            allow = allowExplorationInThridpartActivites(allow);
 
             if (mVerbose > 0) {
                 // StrictMode's disk checks end up catching this on
@@ -2054,22 +2052,6 @@ public class Monkey {
                         "    // " + (allow ? "Allowing" : "Rejecting") + " start of " + intent + " in package " + pkg);
                 StrictMode.setThreadPolicy(savedPolicy);
             }
-            return allow;
-        }
-
-        /**
-         * Allow exploration in thirdpart activities for 10 times (during script methods)
-         * @param allow the original allow tag
-         * @return boolean allow
-         */
-        private boolean allowExplorationInThridpartActivites(boolean allow) {
-            if (!allow && previous_allow_count < 10) {
-                previous_allow_count++;
-                Logger.println("Interacting with third part activity. Cnt: " + previous_allow_count + "/10. Allowed.");
-                return true;
-            }
-            Logger.println("Interacting with third part activity. Cnt: " + previous_allow_count + "/10. Denied.");
-            previous_allow_count = 0;
             return allow;
         }
 
