@@ -149,6 +149,7 @@ public class ProxyServer extends NanoHTTPD {
             Logger.println("Init: ");
             Logger.println("    takeScreenshots: " + takeScreenshots);
             Logger.println("    preFailureScreenshots: " + preFailureScreenshots);
+            Logger.println("    postFailureScreenshots: " + postFailureScreenshots);
             Logger.println("    logStamp: " + logStamp);
             Logger.println("    outputDir: " + outputDir);
             if (!StoneUtils.ensureDir(outputDir)){
@@ -193,6 +194,10 @@ public class ProxyServer extends NanoHTTPD {
                     "text/plain",
                     "OK"
             );
+        }
+
+        if (uri.equals("/dumpHierarchy")) {
+            return getHierarchyResponse();
         }
 
         if (uri.equals("/jsonrpc/0"))
@@ -257,14 +262,39 @@ public class ProxyServer extends NanoHTTPD {
             throw new RuntimeException(e);
         }
 
-        try {
-            Logger.println("[ProxyServer] Finish monkey step. Dumping hierarchy");
-            okhttp3.Response hierarchyResponse = scriptDriverClient.dumpHierarchy();
+        Logger.println("[ProxyServer] Finish monkey step. Dumping hierarchy");
+        return getHierarchyResponse();
+    }
+
+    private Response getHierarchyResponse() {
+        okhttp3.Response hierarchyResponse = scriptDriverClient.dumpHierarchy();
+        if (hierarchyResponse != null && hierarchyResponse.body() != null) {
+            String body = null;
+            try {
+                body = hierarchyResponse.body().string();
+            } catch (IOException e) {
+                return getNoContentResponse();
+            }
+            this.hierarchyResponseCache = body;
             this.useCache = true;
-            return generateServerResponse(hierarchyResponse, true);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            // check the response code
+            Response.Status status = Response.Status.lookup(hierarchyResponse.code());
+            if (status == null) {
+                status = Response.Status.OK;
+            }
+            String contentType = hierarchyResponse.header("Content-Type", "application/json");
+            return newFixedLengthResponse(status, contentType, body);
+        } else {
+            return getNoContentResponse();
         }
+    }
+
+    private Response getNoContentResponse(){
+        return newFixedLengthResponse(
+                Response.Status.NO_CONTENT,
+                "text/plain",
+                ""
+        );
     }
 
     private boolean recordLog(Operate op, String screenshot_file){
@@ -348,11 +378,7 @@ public class ProxyServer extends NanoHTTPD {
             String contentType = okhttpResponse.header("Content-Type", "application/json");
             return newFixedLengthResponse(status, contentType, body);
         } else {
-            return newFixedLengthResponse(
-                    Response.Status.NO_CONTENT,
-                    "text/plain",
-                    ""
-            );
+            return getNoContentResponse();
         }
     }
 
@@ -418,35 +444,6 @@ public class ProxyServer extends NanoHTTPD {
         return String.format(Locale.ENGLISH, "screenshot-%d-%s.png", stepsCount, currentDateTime);
     }
 
-    /**
-     * Generate proxy response from the ui automation server, which finally respond to PC.
-     * Meanwhile, cache the hierarchy to accelerate the stepMonkey request
-     * @param okhttpResponse the okhttp3.response from ui automation server
-     * @param setHierarchyCache cache the hierarchy when doing stepMonkey
-     * @return The NanoHttpD response
-     * @throws IOException .
-     */
-    private Response generateServerResponse(okhttp3.Response okhttpResponse, boolean setHierarchyCache) throws IOException{
-        // read the response from the server and generate response
-        if (okhttpResponse != null && okhttpResponse.body() != null) {
-            String body = okhttpResponse.body().string();
-            if (setHierarchyCache) this.hierarchyResponseCache = body;
-            // check the response code
-            Response.Status status = Response.Status.lookup(okhttpResponse.code());
-            if (status == null) {
-                status = Response.Status.OK;
-            }
-
-            String contentType = okhttpResponse.header("Content-Type", "application/json");
-            return newFixedLengthResponse(status, contentType, body);
-        } else {
-            return newFixedLengthResponse(
-                    Response.Status.NO_CONTENT,
-                    "text/plain",
-                    ""
-            );
-        }
-    }
 
     private Response forward(String uri, String method, String requestBody){
         String targetUrl = client.get_url_builder()
