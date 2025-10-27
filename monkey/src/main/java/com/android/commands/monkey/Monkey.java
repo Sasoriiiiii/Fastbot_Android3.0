@@ -43,7 +43,6 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.StrictMode;
 import android.os.SystemClock;
-import android.util.Log;
 import android.view.IWindowManager;
 import android.view.Surface;
 
@@ -103,7 +102,7 @@ public class Monkey {
      * <p>
      * All values should be zero when checking in.
      */
-    private static final int DEBUG_ALLOW_ANY_STARTS = 0;
+    private static int DEBUG_ALLOW_ANY_STARTS = 0;
     private static final long ONE_MINUTE_IN_MILLISECOND = 1000 * 60;
     private static final File TOMBSTONES_PATH = new File("/data/tombstones");
     /**
@@ -455,6 +454,8 @@ public class Monkey {
      * Custom quick-application launch intent
      */
     private String mMainQuickAppActivity = null;
+
+    private boolean allowAnyStarts = false;
 
 
     /**
@@ -1190,6 +1191,9 @@ public class Monkey {
                         break;
                     case "--ime":
                         ime = nextOptionData();
+                        break;
+                    case "--allow-any-starts":
+                        allowAnyStarts = true;
                         break;
                     case "-h":
                         showUsage();
@@ -1941,6 +1945,7 @@ public class Monkey {
                 "              [--bugreport]\n" +
                 "              [--periodic-bugreport]\n" +
                 "              [--permission-target-system]\n" +
+                "              [--allow-any-starts]\n" +
                 "              COUNT\n";
         System.err.println(usage);
     }
@@ -1974,8 +1979,6 @@ public class Monkey {
      */
     private class ActivityController extends IActivityController.Stub {
 
-        // allow interacting with the third-part app 10 times when using script.
-        private int previous_allow_count = 0;
 
         public boolean activityStarting(Intent intent, String pkg) {
 
@@ -2038,7 +2041,7 @@ public class Monkey {
                 }
             }
 
-            boolean allow = MonkeyUtils.getPackageFilter().checkEnteringPackage(pkg) && allowActivity || (DEBUG_ALLOW_ANY_STARTS != 0);
+            boolean allow = MonkeyUtils.getPackageFilter().checkEnteringPackage(pkg) && allowActivity || (DEBUG_ALLOW_ANY_STARTS != 0) || allowAnyStarts;
 
             if (mVerbose > 0) {
                 // StrictMode's disk checks end up catching this on
@@ -2058,7 +2061,7 @@ public class Monkey {
         public boolean activityResuming(String pkg) {
             StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskWrites();
             Logger.println("    // activityResuming(" + pkg + ")");
-            boolean allow = MonkeyUtils.getPackageFilter().checkEnteringPackage(pkg) || (DEBUG_ALLOW_ANY_STARTS != 0);
+            boolean allow = MonkeyUtils.getPackageFilter().checkEnteringPackage(pkg) || (DEBUG_ALLOW_ANY_STARTS != 0) || allowAnyStarts;
 
             if (!allow) {
                 if (mVerbose > 0) {
