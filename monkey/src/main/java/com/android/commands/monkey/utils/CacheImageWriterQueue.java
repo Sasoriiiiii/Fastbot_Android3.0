@@ -21,12 +21,13 @@ package com.android.commands.monkey.utils;
 import android.graphics.Bitmap;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.LinkedList;
 
 
 public class CacheImageWriterQueue extends ImageWriterQueue {
+
+    private int cacheSize;
+    private int postFailureNCounter = -1;
+    private int postFailureN = -1;
 
     @Override
     public void run() {
@@ -36,45 +37,32 @@ public class CacheImageWriterQueue extends ImageWriterQueue {
     public synchronized void add(Bitmap map, File dst) {
         requestQueue.add(new Req(map, dst));
         Logger.println("Adding requestQueue");
-        while (requestQueue.size() > Config.flushImagesThreshold) {
+        while (requestQueue.size() > this.cacheSize) {
             Logger.println("Removing front img of the queue");
             requestQueue.removeFirst();
         }
+        checkPostN();
     }
 
-    @Override
-    public synchronized void flush() {
-        Logger.println("[CacheImageWriterQueue] Flushing " + requestQueue.size() + " images");
-        for (Req req: requestQueue){
-            writePNG(req);
-        }
+    public void setCacheSize(int cacheSize){
+        this.cacheSize = cacheSize;
     }
 
-    @Override
-    protected void writePNG(Req req) {
-        Bitmap map = req.map;
-        File dst = req.dst;
-        if (map == null) {
-            Logger.println(dst.getAbsolutePath());
-            Logger.format("No screen shot for %s", dst.getAbsolutePath());
-            return;
-        }
-        try (FileOutputStream fos = new FileOutputStream(dst)) {
-            map.compress(Bitmap.CompressFormat.PNG, 75, fos);
-        } catch (IOException e) {
-            e.printStackTrace();
-            Logger.format("Fail to save screen shot to %s", dst.getAbsolutePath());
-        } finally {
-            map.recycle();
-        }
+    public void setPostFailureN(int postFailureN){
+        this.postFailureN = postFailureN;
     }
 
-    public boolean isFull(){
-        return requestQueue.size() >= Config.flushImagesThreshold;
+    public void checkPostN(){
+        if (postFailureNCounter == -1 || postFailureN <= 0) return;
+        postFailureNCounter--;
+        if (postFailureNCounter == 0) flush();
     }
 
-    public void clear() {
-        requestQueue.clear();
+    public void resetPostFailureNCounter(){
+        if (postFailureN <= 0) return;
+
+        if (postFailureNCounter > 0) flush();
+        postFailureNCounter = postFailureN;
     }
 
     @Override

@@ -54,7 +54,7 @@ public class ImageWriterQueue implements Runnable {
             return;
         }
         try (FileOutputStream fos = new FileOutputStream(dst)) {
-            map.compress(Bitmap.CompressFormat.PNG, 85, fos);
+            map.compress(Bitmap.CompressFormat.PNG, 75, fos);
         } catch (IOException e) {
             e.printStackTrace();
             Logger.format("Fail to save screen shot to %s", dst.getAbsolutePath());

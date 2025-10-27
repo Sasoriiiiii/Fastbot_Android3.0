@@ -285,8 +285,8 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         return server.getDeviceOutputDir();
     }
 
-    public void flushImageQueue() {
-        server.flushImageQueue();
+    public void processFailureNScreenshots() {
+        server.processFailureNScreenshots();
     }
 
     public String peekImageQueue() {

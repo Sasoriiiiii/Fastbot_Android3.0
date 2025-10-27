@@ -47,6 +47,7 @@ public class ProxyServer extends NanoHTTPD {
 
     public List<String> blockTrees;
     public int preFailureScreenshots = 0;
+    public int postFailureScreenshots = 0;
 
 //    private CoverageData mCoverageData;
     private int mVerbose = 1;
@@ -74,14 +75,20 @@ public class ProxyServer extends NanoHTTPD {
             mImageWriter = new ImageWriterQueue();
         } else {
             Logger.println(String.format("take %d screenshots before failure", preFailureScreenshots));
+            Logger.println(String.format("take %d screenshots after failure", postFailureScreenshots));
             mImageWriter = new CacheImageWriterQueue();
+            ((CacheImageWriterQueue) mImageWriter).setCacheSize(preFailureScreenshots);
+            ((CacheImageWriterQueue) mImageWriter).setPostFailureN(postFailureScreenshots);
         }
         Thread imageThread = new Thread(mImageWriter);
         imageThread.start();
     }
 
-    public void flushImageQueue() {
+    public void processFailureNScreenshots() {
         mImageWriter.flush();
+        if (mImageWriter instanceof CacheImageWriterQueue){
+            ((CacheImageWriterQueue) mImageWriter).resetPostFailureNCounter();
+        }
     }
 
     public String peekImageQueue() {
@@ -136,6 +143,7 @@ public class ProxyServer extends NanoHTTPD {
             takeScreenshots = req.isTakeScreenshots();
             logStamp = req.getLogStamp();
             preFailureScreenshots = req.getPreFailureScreenshots();
+            postFailureScreenshots = req.getPostFailureScreenshots();
             String deviceOutputRoot = req.getDeviceOutputRoot();
             outputDir = new File(new File(deviceOutputRoot), "output_" + logStamp);
             Logger.println("Init: ");
@@ -175,7 +183,7 @@ public class ProxyServer extends NanoHTTPD {
                 recordLog(jsonRPCBody, screenshot_file);
                 String state = jsonRPCBody.getString("state");
                 if (state.equals("fail") || state.equals("error")){
-                    flushImageQueue();
+                    processFailureNScreenshots();
                 }
             }catch (JSONException e){
                 Logger.println("Error when parsing jsonrpc request body: " + requestBody);
