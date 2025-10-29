@@ -35,10 +35,9 @@ public class CacheImageWriterQueue extends ImageWriterQueue {
 
     @Override
     public synchronized void add(Bitmap map, File dst) {
+        lastImage = dst.getName();
         requestQueue.add(new Req(map, dst));
-        Logger.println("Adding requestQueue");
         while (requestQueue.size() > this.cacheSize) {
-            Logger.println("Removing front img of the queue");
             requestQueue.removeFirst();
         }
         checkPostN();
