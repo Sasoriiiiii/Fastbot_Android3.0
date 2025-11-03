@@ -684,7 +684,6 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
     }
 
     protected void generateEvents() {
-        long start = System.currentTimeMillis();
         if (hasEvent()) {
             return;
         }
@@ -696,9 +695,12 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
         Element info = null;
 
         int repeat = refectchInfoCount;
-        dumpHierarchy();
-        stringOfGuiTree = this.stringOfGuiTree;
-//        Logger.println("Repeat: " + stringOfGuiTree);
+
+        int retry = 2;
+        while ("".equals(stringOfGuiTree) && retry-- > 0){
+            dumpHierarchy();
+            stringOfGuiTree = this.stringOfGuiTree;
+        }
 
         // try to get AccessibilityNodeInfo quickly for several times.
         while (repeat-- > 0) {
@@ -849,6 +851,8 @@ public class MonkeySourceApeU2 implements MonkeyEventSource {
                             "accessibility maybe error, fuzz needed."
             );
             fuzzingAction = generateFuzzingAction(fullFuzzing);
+            Logger.println("// Fuzzing action: " + fuzzingAction.toString());
+            server.recordMonkeyStep(fuzzingAction);
             generateEventsForAction(fuzzingAction);
         }
     }

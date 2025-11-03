@@ -1809,7 +1809,7 @@ public class Monkey {
             MonkeySourceApeU2 monkeySourceApeU2 = ((MonkeySourceApeU2) mEventSource);
             String crashScreen = monkeySourceApeU2.peekImageQueue();
             monkeySourceApeU2.processFailureNScreenshots();
-            msg = String.format("StepsCount: %d\nCrashScreen: %s\n%s", monkeySourceApeU2.getStepsCount(), crashScreen, msg);
+            msg = String.format("StepsCount: %d\nCrashScreen: %s%s", monkeySourceApeU2.getStepsCount(), crashScreen, msg);
 
             String outFile = new File(monkeySourceApeU2.getDeviceOutputDir(), "crash-dump.log").getAbsolutePath();
             try {
