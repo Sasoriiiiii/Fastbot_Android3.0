@@ -277,7 +277,9 @@ public class ProxyServer extends NanoHTTPD {
                 return getNoContentResponse();
             }
             this.hierarchyResponseCache = body;
-            this.useCache = true;
+            if (!this.hierarchyResponseCache.isEmpty()){
+                this.useCache = true;
+            }
             // check the response code
             Response.Status status = Response.Status.lookup(hierarchyResponse.code());
             if (status == null) {
@@ -414,12 +416,16 @@ public class ProxyServer extends NanoHTTPD {
         }
         catch (IOException e) {
             Logger.errorPrintln("[ProxyServer] [Error]");
-            return null;
+            return "";
         }
 
         JsonRPCResponse res_obj = gson.fromJson(res, JsonRPCResponse.class);
         String base64Data = res_obj.getResult();
 
+        if (base64Data == null){
+            Logger.println("[ProxyServer][Error] failed to take the screenshot.");
+            return "";
+        }
         // Decode the response with android.util.Base64
         byte[] decodedBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT);
 
@@ -430,28 +436,28 @@ public class ProxyServer extends NanoHTTPD {
 
         if (bitmap == null){
             Logger.println("[ProxyServer][Error] Failed to parse screenshot response to bitmap");
-            return null;
-        } else {
-            // Ensure screenshots dir
-            File screenshotDir = new File(outputDir, "screenshots");
-            Logger.println("Screenshots will be saved to: " + screenshotDir);
-            if (!screenshotDir.exists()) {
-                boolean created = screenshotDir.mkdirs();
-                if (!created) {
-                    Logger.println("[ProxyServer][Error] Failed to create screenshots directory");
-                    return null;
-                }
-            }
-
-            // create the screenshot file
-            File screenshotFile = new File(
-                screenshotDir,
-                screenshot_file
-            );
-            Logger.println("[ProxyServer] Adding the screenshot to ImageWriter");
-            mImageWriter.add(bitmap, screenshotFile);
-            return screenshot_file;
+            return "";
         }
+        // Ensure screenshots dir
+        File screenshotDir = new File(outputDir, "screenshots");
+        Logger.println("Screenshots will be saved to: " + screenshotDir);
+        if (!screenshotDir.exists()) {
+            boolean created = screenshotDir.mkdirs();
+            if (!created) {
+                Logger.println("[ProxyServer][Error] Failed to create screenshots directory");
+                return "";
+            }
+        }
+
+        // create the screenshot file
+        File screenshotFile = new File(
+            screenshotDir,
+            screenshot_file
+        );
+        Logger.println("[ProxyServer] Adding the screenshot to ImageWriter");
+        mImageWriter.add(bitmap, screenshotFile);
+        return screenshot_file;
+
     }
 
     private String getScreenshotName(){
