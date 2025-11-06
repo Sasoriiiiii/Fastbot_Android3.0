@@ -172,6 +172,14 @@ namespace fastbotx {
         if (action != nullptr) {
             BLOG("selected action %s", action->toString().c_str());
             opt = action->toOperate();
+            ActivityStateActionPtr stateAction = std::dynamic_pointer_cast<fastbotx::ActivityStateAction>(action);
+
+            if (stateAction) {
+                std::string widget = stateAction->getTarget()->toJson();
+                opt->widget = widget;
+                BLOG("stateAction Widget: %s", widget.c_str());
+            }
+
             if (this->_preference) {
                 this->_preference->patchOperate(opt);
             }
