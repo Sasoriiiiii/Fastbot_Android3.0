@@ -8,6 +8,7 @@ import com.android.commands.monkey.fastbot.client.Operate;
 import com.android.commands.monkey.source.CoverageData;
 import com.android.commands.monkey.source.MonkeySourceApeU2;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -171,6 +172,28 @@ public class ProxyServer extends NanoHTTPD {
             stepsCount = req.getStepsCount();
             Logger.println("[ProxyServer] stepsCount: " + stepsCount);
             return stepMonkey(req.getBlockWidgets(), req.getBlockTrees());
+        }
+
+        if (uri.equals("/sendInfo") && session.getMethod() == Method.POST)
+        {
+            if (requestBody.contains("kill_apps")){
+                JSONObject obj = new JSONObject();
+                try {
+                    obj.put("Type", "Monkey");
+                    obj.put("MonkeyStepsCount", stepsCount+1);
+                    obj.put("Time", Logger.getCurrentTimeStamp());
+                    obj.put("Info", "kill_apps");
+                    obj.put("Screenshot", "");
+                    saveLog(obj, "steps.log");
+                } catch (JSONException e){
+                    Logger.errorPrintln("Error when recording log.");
+                }
+            }
+            return newFixedLengthResponse(
+                Response.Status.OK,
+                "text/plain",
+                "OK"
+            );
         }
 
         if (uri.equals("/logScript") && session.getMethod() == Method.POST)
